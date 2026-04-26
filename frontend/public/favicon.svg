@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="viteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bd34fe" />
+      <stop offset="100%" stop-color="#41d1ff" />
+    </linearGradient>
+  </defs>
+  <path d="M16 2L2 14h10l-2 16 16-16H16l4-12z" fill="url(#viteGrad)" />
+</svg>
