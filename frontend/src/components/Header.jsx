@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, User, Settings, LogOut, CheckCircle, AlertCircle, Menu } from 'lucide-react';
+import { Search, Bell, User, Settings, LogOut, CheckCircle, AlertCircle, Menu, AlertTriangle, X } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getApplications, getUsers, getNotifications, saveNotifications } from '../utils/dataStore';
+import { getApplications, getUsers, fetchNotifications, updateNotificationReadStatus, createNotification } from '../utils/dataStore';
 
 const Header = ({ userRole, userName, setIsMobileMenuOpen }) => {
   const navigate = useNavigate();
@@ -16,20 +16,46 @@ const Header = ({ userRole, userName, setIsMobileMenuOpen }) => {
   const displayName = userName || currentUser.name || 'Admin';
   const displayRole = userRole || currentUser.role || 'Administrator';
   
-  const applications = getApplications() || [];
-  const users = getUsers() || [];
-  const allNotifs = getNotifications() || [];
-  
-  // Filter notifications for the current user
-  const [myNotifs, setMyNotifs] = useState(() => {
-    return allNotifs.filter(n => n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL')));
-  });
+  const [applications, setApplications] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [myNotifs, setMyNotifs] = useState([]);
+
+  // Fetch notifications and data
+  useEffect(() => {
+    const loadData = async () => {
+      if (!currentUser.id) return;
+      
+      try {
+        const notifs = await fetchNotifications(currentUser.role, currentUser.id);
+        setMyNotifs(notifs);
+
+        if (currentUser.role === 'Admin') {
+           const allUsers = await fetch('http://localhost:5000/api/users').then(res => res.json()).catch(() => []);
+           setUsers(allUsers || []);
+           const allApps = await fetch('http://localhost:5000/api/applications').then(res => res.json()).catch(() => []);
+           setApplications(allApps || []);
+        } else {
+           const myApps = await fetchApplications(currentUser.id);
+           setApplications(myApps || []);
+        }
+      } catch (err) {
+        console.error("Failed to load header data");
+      }
+    };
+    loadData();
+    
+    // Poll every 5 seconds for new notifications
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, [currentUser.id, currentUser.role]);
 
   // Keep them up to date in case another tab changes them (optional simulation)
   useEffect(() => {
-    const handleStorageChange = () => {
-      const freshNotifs = getNotifications() || [];
-      setMyNotifs(freshNotifs.filter(n => n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL'))));
+    const handleStorageChange = async () => {
+      if (currentUser.id) {
+        const notifs = await fetchNotifications(currentUser.role, currentUser.id);
+        setMyNotifs(notifs);
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
@@ -37,16 +63,62 @@ const Header = ({ userRole, userName, setIsMobileMenuOpen }) => {
 
   const unreadCount = myNotifs.filter(n => !n.read).length;
 
-  const markAllRead = () => {
-    const fullNotifs = getNotifications();
-    const updated = fullNotifs.map(n => {
-      if (n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL'))) {
-        return { ...n, read: true };
-      }
-      return n;
-    });
-    saveNotifications(updated);
-    setMyNotifs(updated.filter(n => n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL'))));
+  const markAllRead = async () => {
+    const unreadNotifs = myNotifs.filter(n => !n.read);
+    for (const notif of unreadNotifs) {
+      await updateNotificationReadStatus(notif.id);
+    }
+    
+    const updated = await fetchNotifications(currentUser.role, currentUser.id);
+    setMyNotifs(updated);
+  };
+
+  const handleNotifClick = async (notif) => {
+    if (!notif.read) {
+      await updateNotificationReadStatus(notif.id);
+      const updated = await fetchNotifications(currentUser.role, currentUser.id);
+      setMyNotifs(updated);
+    }
+
+    // Close notifications panel and full modal
+    setShowNotifications(false);
+    setShowAllNotifsModal(false);
+
+    // Route appropriately based on type/title
+    const title = notif.title.toLowerCase();
+    const role = currentUser.role;
+
+    if (title.includes('login') || title.includes('welcome') || title.includes('logout')) {
+      navigate(role === 'Admin' ? '/admin-dashboard' : '/user-dashboard');
+    } else if (title.includes('apply') || title.includes('submit') || title.includes('created')) {
+      navigate(role === 'Admin' ? '/admin/applications' : '/user/history');
+    } else if (title.includes('decision') || title.includes('approve') || title.includes('reject') || title.includes('active') || title.includes('agreement') || title.includes('signed')) {
+      navigate(role === 'Admin' ? '/admin/decisions' : '/user/decision');
+    } else if (title.includes('profile') || title.includes('password') || title.includes('settings')) {
+      navigate(role === 'Admin' ? '/admin/settings' : '/user/settings');
+    } else if (title.includes('register') || title.includes('user registered')) {
+      navigate(role === 'Admin' ? '/admin/applicants' : '/user-dashboard');
+    } else if (title.includes('score') || title.includes('recalculate')) {
+      navigate(role === 'Admin' ? '/admin-dashboard' : '/user/score');
+    } else if (title.includes('support') || title.includes('ticket')) {
+      navigate(role === 'Admin' ? '/admin-dashboard' : '/user/support');
+    } else {
+      navigate(role === 'Admin' ? '/admin-dashboard' : '/user-dashboard');
+    }
+  };
+
+  const getNotifIcon = (type, size = 18) => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="text-[#10B981]" size={size} />;
+      case 'error':
+        return <AlertCircle className="text-[#EF4444]" size={size} />;
+      case 'warning':
+        return <AlertTriangle className="text-[#F59E0B]" size={size} />;
+      case 'info':
+      default:
+        return <Bell className="text-[#3B82F6]" size={size} />;
+    }
   };
 
   const getTimeAgo = (dateStr) => {
@@ -73,9 +145,7 @@ const Header = ({ userRole, userName, setIsMobileMenuOpen }) => {
   }, []);
 
   const handleLogout = () => {
-    import('../utils/dataStore').then(({ addNotification }) => {
-      addNotification(currentUser.role, currentUser.id, 'Logged Out', 'You have successfully logged out of your account.', 'info');
-    });
+    createNotification(currentUser.role, currentUser.id, 'Logged Out', 'You have successfully logged out of your account.', 'info');
     localStorage.removeItem('credscore_current_user');
     navigate('/login');
   };
@@ -233,14 +303,19 @@ const Header = ({ userRole, userName, setIsMobileMenuOpen }) => {
           {showNotifications && (
             <div className="absolute top-full right-0 mt-3 w-80 bg-[#101B57] border border-[#1E2A68] rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
               <div className="p-4 border-b border-[#1E2A68] flex justify-between items-center bg-[#09133E]">
-                <h3 className="font-bold text-[#FFFFFF]">Notifications {unreadCount > 0 && `(${unreadCount})`}</h3>
-                <span onClick={markAllRead} className="text-xs text-[#3B82F6] cursor-pointer hover:text-[#FFFFFF]">Mark all read</span>
+                <h3 className="font-bold text-[#FFFFFF] flex items-center gap-2">
+                  Notifications {unreadCount > 0 && <span className="bg-[#EF4444] text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
+                </h3>
+                <div className="flex items-center gap-3">
+                  <span onClick={markAllRead} className="text-xs text-[#3B82F6] cursor-pointer hover:text-[#FFFFFF]">Mark all read</span>
+                  <button onClick={() => setShowNotifications(false)} className="text-[#94A3B8] hover:text-[#FFFFFF] transition-colors" title="Close"><X size={16} /></button>
+                </div>
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {myNotifs.length > 0 ? myNotifs.slice(0, 5).map(n => (
-                  <div key={n.id} className={`p-4 border-b border-[#1E2A68] hover:bg-[#0A1445] cursor-pointer transition-colors flex gap-3 ${!n.read ? 'bg-[#0A1445]/50' : 'opacity-70'}`}>
+                  <div key={n.id} onClick={() => handleNotifClick(n)} className={`p-4 border-b border-[#1E2A68] hover:bg-[#0A1445] cursor-pointer transition-colors flex gap-3 ${!n.read ? 'bg-[#0A1445]/50' : 'opacity-70'}`}>
                     <div className="mt-1">
-                      {n.type === 'success' ? <CheckCircle className="text-[#10B981]" size={18} /> : <AlertCircle className="text-[#3B82F6]" size={18} />}
+                      {getNotifIcon(n.type, 18)}
                     </div>
                     <div>
                       <p className="text-sm text-[#FFFFFF] font-medium mb-1">{n.title}</p>
@@ -267,28 +342,30 @@ const Header = ({ userRole, userName, setIsMobileMenuOpen }) => {
 
         {/* Full Screen Notifications Modal */}
         {showAllNotifsModal && (
-          <div className="fixed inset-0 bg-[#050B2D]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <div className="bg-[#101B57] p-8 rounded-2xl border border-[#1E2A68] max-w-2xl w-full h-[80vh] flex flex-col animate-fade-in-up relative">
-              <button 
-                onClick={() => setShowAllNotifsModal(false)}
-                className="absolute top-4 right-4 text-[#94A3B8] hover:text-[#FFFFFF] transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-              
-              <div className="flex justify-between items-end mb-6">
+          <div className="fixed inset-0 bg-[#050B2D]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowAllNotifsModal(false)}>
+            <div className="bg-[#101B57] p-8 rounded-2xl border border-[#1E2A68] max-w-2xl w-full h-[80vh] flex flex-col animate-fade-in-up relative" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-start mb-6">
                 <div>
                   <h3 className="text-2xl font-bold text-[#FFFFFF] mb-2">All Notifications</h3>
                   <p className="text-sm text-[#94A3B8]">Your complete notification history.</p>
                 </div>
-                <button onClick={markAllRead} className="text-sm text-[#3B82F6] hover:text-[#FFFFFF] transition-colors font-medium">Mark all as read</button>
+                <div className="flex flex-col items-end gap-2">
+                  <button 
+                    onClick={() => setShowAllNotifsModal(false)}
+                    className="p-2 bg-[#050B2D] rounded-full border border-[#1E2A68] text-[#94A3B8] hover:text-[#FFFFFF] hover:bg-[#EF4444] transition-colors flex items-center justify-center"
+                    title="Close"
+                  >
+                    <X size={24} />
+                  </button>
+                  <button onClick={markAllRead} className="text-sm text-[#3B82F6] hover:text-[#FFFFFF] transition-colors font-medium">Mark all as read</button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-3 pr-2">
                 {myNotifs.length > 0 ? myNotifs.map(n => (
-                  <div key={n.id} className={`p-4 rounded-xl border border-[#1E2A68] transition-colors flex gap-4 ${!n.read ? 'bg-[#09133E]' : 'bg-[#0A1445] opacity-70'}`}>
+                  <div key={n.id} onClick={() => handleNotifClick(n)} className={`p-4 rounded-xl border border-[#1E2A68] hover:bg-[#0A1445]/50 cursor-pointer transition-colors flex gap-4 ${!n.read ? 'bg-[#09133E]' : 'bg-[#0A1445] opacity-70'}`}>
                     <div className="mt-1 bg-[#101B57] p-2 rounded-lg border border-[#1E2A68]">
-                      {n.type === 'success' ? <CheckCircle className="text-[#10B981]" size={20} /> : <AlertCircle className="text-[#3B82F6]" size={20} />}
+                      {getNotifIcon(n.type, 20)}
                     </div>
                     <div>
                       <p className="text-base text-[#FFFFFF] font-bold mb-1">{n.title}</p>
@@ -301,6 +378,15 @@ const Header = ({ userRole, userName, setIsMobileMenuOpen }) => {
                     No notifications in your history.
                   </div>
                 )}
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-[#1E2A68] flex justify-end">
+                <button 
+                  onClick={() => setShowAllNotifsModal(false)}
+                  className="px-6 py-2.5 bg-[#0A1445] hover:bg-[#1E2A68] text-[#FFFFFF] text-sm font-bold rounded-xl transition-colors border border-[#1E2A68]"
+                >
+                  Close Window
+                </button>
               </div>
             </div>
           </div>

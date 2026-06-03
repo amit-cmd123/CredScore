@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import UserLayout from '../components/UserLayout';
 import { MessageSquare, PhoneCall, Mail, ChevronDown, ChevronUp, X, Send, Bot, User, CheckCircle2 } from 'lucide-react';
-import { addNotification } from '../utils/dataStore';
+import { createNotification } from '../utils/dataStore';
 
 const FAQs = [
   {
@@ -34,16 +34,25 @@ const FAQs = [
   }
 ];
 
+const QUICK_REPLIES = [
+  "Check Loan Status",
+  "How to apply?",
+  "Speak to human"
+];
+
 const UserSupport = () => {
   const [openFAQ, setOpenFAQ] = useState(0);
   
+  const getCurrentTime = () => new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'bot', text: 'Hello! I am the CredScore AI assistant. How can I help you today?' }
+    { sender: 'bot', text: 'Hello! I am the CredScore AI assistant. How can I help you today?', time: getCurrentTime() }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(true);
   
   // Ticket State
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
@@ -65,19 +74,16 @@ const UserSupport = () => {
     }
   }, [chatMessages, isTyping, isChatOpen]);
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    
-    const newMsg = { sender: 'user', text: chatInput };
-    setChatMessages([...chatMessages, newMsg]);
-    setChatInput('');
+  const processUserMessage = (messageText) => {
+    const newMsg = { sender: 'user', text: messageText, time: getCurrentTime() };
+    setChatMessages(prev => [...prev, newMsg]);
     setIsTyping(true);
+    setShowQuickReplies(false);
     
     // Simulate AI response
     setTimeout(() => {
       let botResponse = "I'm sorry, I didn't quite catch that. Could you rephrase your question?";
-      const lowerInput = newMsg.text.toLowerCase();
+      const lowerInput = messageText.toLowerCase();
       
       if (lowerInput.includes('loan') || lowerInput.includes('apply')) {
         botResponse = "You can apply for a new loan by navigating to the 'Loan Application' tab on the left sidebar. Our AI will give you an instant decision!";
@@ -89,11 +95,28 @@ const UserSupport = () => {
         botResponse = "Hello there! How can I assist you with your CredScore account today?";
       } else if (lowerInput.includes('human') || lowerInput.includes('agent')) {
         botResponse = "I am an AI assistant. If you need to speak to a human, please call our support line at 1-800-CRED-SCORE or raise an email ticket.";
+      } else if (lowerInput.includes('status')) {
+        botResponse = "You can view the real-time status of your active loans in the 'Decision Center' tab.";
       }
       
-      setChatMessages(prev => [...prev, { sender: 'bot', text: botResponse }]);
+      setChatMessages(prev => [...prev, { sender: 'bot', text: botResponse, time: getCurrentTime() }]);
       setIsTyping(false);
+      
+      // Optionally show quick replies again after a response
+      setTimeout(() => setShowQuickReplies(true), 2000);
     }, 1500);
+  };
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const currentInput = chatInput;
+    setChatInput('');
+    processUserMessage(currentInput);
+  };
+
+  const handleQuickReply = (reply) => {
+    processUserMessage(reply);
   };
 
   const handleRaiseTicket = (e) => {
@@ -102,9 +125,13 @@ const UserSupport = () => {
     
     setIsTicketSubmitting(true);
     
-    setTimeout(() => {
-      addNotification('Admin', 'ALL', `New Support Ticket: ${ticketSubject}`, `${currentUser.name} raised a ticket: ${ticketDesc.substring(0, 50)}...`, 'warning');
-      addNotification('User', currentUser.id, 'Support Ticket Received', `Your ticket "${ticketSubject}" has been received. Our team will contact you shortly.`, 'success');
+    setTimeout(async () => {
+      try {
+        await createNotification('Admin', 'ALL', `New Support Ticket: ${ticketSubject}`, `${currentUser.name} raised a ticket: ${ticketDesc.substring(0, 50)}...`, 'warning');
+        await createNotification('User', currentUser.id, 'Support Ticket Received', `Your ticket "${ticketSubject}" has been received. Our team will contact you shortly.`, 'success');
+      } catch (err) {
+        console.error(err);
+      }
       
       setIsTicketSubmitting(false);
       setTicketSuccess(true);
@@ -186,73 +213,97 @@ const UserSupport = () => {
 
       {/* AI Chat Modal */}
       {isChatOpen && (
-        <div className="fixed bottom-6 right-6 w-96 h-[500px] bg-[#050B2D] border border-[#1E2A68] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-col z-50 animate-fade-in-up overflow-hidden">
+        <div className="fixed bottom-6 right-6 w-96 h-[550px] bg-[#050B2D] border border-[#1E2A68] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] flex flex-col z-50 animate-fade-in-up overflow-hidden">
           {/* Chat Header */}
-          <div className="bg-[#101B57] p-4 border-b border-[#1E2A68] flex justify-between items-center">
+          <div className="bg-gradient-to-r from-[#101B57] to-[#1E2A68] p-4 border-b border-[#1E2A68] flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#3B82F6]/20 rounded-full flex items-center justify-center text-[#3B82F6]">
+              <div className="w-10 h-10 bg-[#FFFFFF] rounded-full flex items-center justify-center text-[#3B82F6] shadow-inner relative">
                 <Bot size={20} />
+                <span className="absolute bottom-0 right-0 w-3 h-3 border-2 border-[#101B57] rounded-full bg-[#10B981]"></span>
               </div>
               <div>
-                <h3 className="text-[#FFFFFF] font-bold text-sm">CredScore Support AI</h3>
-                <p className="text-[#10B981] text-xs flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#10B981]"></span> Online
-                </p>
+                <h3 className="text-[#FFFFFF] font-bold text-sm tracking-tight">CredScore Support AI</h3>
+                <p className="text-[#10B981] text-xs font-medium">Online & Ready</p>
               </div>
             </div>
-            <button onClick={() => setIsChatOpen(false)} className="text-[#94A3B8] hover:text-[#FFFFFF] transition-colors">
-              <X size={20} />
+            <button onClick={() => setIsChatOpen(false)} className="w-8 h-8 rounded-full bg-[#050B2D]/50 flex items-center justify-center text-[#94A3B8] hover:text-[#FFFFFF] hover:bg-[#050B2D] transition-colors">
+              <X size={16} />
             </button>
           </div>
 
           {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-[#050B2D]">
             {chatMessages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`flex gap-2 max-w-[80%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.sender === 'user' ? 'bg-[#1E2A68] text-[#FFFFFF]' : 'bg-[#3B82F6]/20 text-[#3B82F6]'}`}>
+              <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
+                <div className={`flex gap-3 max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.sender === 'user' ? 'bg-[#3B82F6] text-[#FFFFFF]' : 'bg-[#1E2A68] text-[#FFFFFF]'}`}>
                     {msg.sender === 'user' ? <User size={14} /> : <Bot size={14} />}
                   </div>
-                  <div className={`p-3 rounded-2xl text-sm ${msg.sender === 'user' ? 'bg-[#3B82F6] text-[#FFFFFF] rounded-tr-none' : 'bg-[#101B57] text-[#E2E8F0] border border-[#1E2A68] rounded-tl-none'}`}>
-                    {msg.text}
+                  <div className="flex flex-col gap-1">
+                    <div className={`p-3.5 text-[0.9rem] leading-relaxed ${msg.sender === 'user' ? 'bg-[#3B82F6] text-[#FFFFFF] rounded-2xl rounded-tr-sm shadow-[0_4px_15px_rgba(59,130,246,0.3)]' : 'bg-[#101B57] text-[#E2E8F0] border border-[#1E2A68] rounded-2xl rounded-tl-sm shadow-sm'}`}>
+                      {msg.text}
+                    </div>
+                    {msg.time && (
+                      <span className={`text-[0.65rem] text-[#94A3B8] ${msg.sender === 'user' ? 'text-right pr-1' : 'text-left pl-1'}`}>
+                        {msg.time}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
+            
             {isTyping && (
-              <div className="flex justify-start">
-                <div className="flex gap-2 max-w-[80%] flex-row">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[#3B82F6]/20 text-[#3B82F6]">
+              <div className="flex justify-start animate-fade-in-up">
+                <div className="flex gap-3 max-w-[80%] flex-row">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[#1E2A68] text-[#FFFFFF] shadow-sm">
                     <Bot size={14} />
                   </div>
-                  <div className="p-4 rounded-2xl bg-[#101B57] border border-[#1E2A68] rounded-tl-none flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-[#94A3B8] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-1.5 h-1.5 bg-[#94A3B8] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-1.5 h-1.5 bg-[#94A3B8] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="p-4 rounded-2xl bg-[#101B57] border border-[#1E2A68] rounded-tl-sm flex items-center gap-1.5 shadow-sm h-11">
+                    <div className="w-1.5 h-1.5 bg-[#3B82F6] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-[#3B82F6] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-[#3B82F6] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
                 </div>
               </div>
             )}
+
+            {!isTyping && showQuickReplies && (
+              <div className="flex flex-wrap gap-2 justify-end pt-2 animate-fade-in-up">
+                {QUICK_REPLIES.map((reply, index) => (
+                  <button 
+                    key={index}
+                    onClick={() => handleQuickReply(reply)}
+                    className="text-xs px-3 py-1.5 bg-[#101B57] border border-[#3B82F6]/30 hover:border-[#3B82F6] hover:bg-[#3B82F6]/10 text-[#3B82F6] rounded-full transition-colors font-medium"
+                  >
+                    {reply}
+                  </button>
+                ))}
+              </div>
+            )}
+            
             <div ref={chatEndRef} />
           </div>
 
           {/* Chat Input */}
-          <div className="p-4 bg-[#101B57] border-t border-[#1E2A68]">
+          <div className="p-4 bg-[#101B57] border-t border-[#1E2A68] shrink-0">
             <form onSubmit={handleSendMessage} className="relative">
               <input 
                 type="text" 
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type your message..." 
-                className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-full pl-4 pr-12 py-3 text-sm text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none"
+                placeholder="Ask me anything..." 
+                className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-full pl-5 pr-14 py-3.5 text-sm text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none shadow-inner placeholder:text-[#94A3B8]"
               />
-              <button 
-                type="submit" 
-                disabled={!chatInput.trim() || isTyping}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#3B82F6] rounded-full flex items-center justify-center text-[#FFFFFF] hover:bg-[#2563EB] transition-colors disabled:opacity-50"
-              >
-                <Send size={14} />
-              </button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
+                <button 
+                  type="submit" 
+                  disabled={!chatInput.trim() || isTyping}
+                  className="w-9 h-9 bg-[#3B82F6] rounded-full flex items-center justify-center text-[#FFFFFF] hover:bg-[#2563EB] transition-colors disabled:opacity-40 shadow-sm"
+                >
+                  <Send size={15} className="-ml-0.5" />
+                </button>
+              </div>
             </form>
           </div>
         </div>

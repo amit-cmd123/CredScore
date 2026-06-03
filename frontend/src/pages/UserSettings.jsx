@@ -1,10 +1,126 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import UserLayout from '../components/UserLayout';
-import { User, Lock, Bell, Shield, Save, CheckCircle2, AlertCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
-import { addNotification, getNotifications } from '../utils/dataStore';
+import { User, Lock, Bell, Shield, Save, CheckCircle2, AlertCircle, AlertTriangle, Eye, EyeOff, Sun, Moon, Monitor } from 'lucide-react';
+import { addNotification, getNotifications, saveNotifications } from '../utils/dataStore';
+
+const AppearanceSettingsTab = () => {
+  const [theme, setTheme] = useState(localStorage.getItem('credscore_theme') || 'light');
+
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('credscore_theme', newTheme);
+    
+    if (newTheme === 'system') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.className = isDark ? 'dark-theme' : 'light-theme';
+    } else {
+      document.documentElement.className = newTheme + '-theme';
+    }
+  };
+
+  return (
+    <div className="bg-[#101B57] rounded-2xl border border-[#1E2A68] p-8 animate-fade-in-up">
+      <h2 className="text-xl font-bold text-[#FFFFFF] mb-6">Appearance</h2>
+      <p className="text-sm text-[#94A3B8] mb-6">Select your preferred theme for the CredScore portal.</p>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Light Mode */}
+        <button 
+          onClick={() => handleThemeChange('light')}
+          className={`flex flex-col items-center p-6 rounded-xl border-2 transition-all gap-3 relative overflow-hidden cursor-pointer ${
+            theme === 'light'
+              ? 'border-[#3B82F6] bg-[#09133E] text-[#FFFFFF]'
+              : 'border-[#1E2A68] hover:border-[#94A3B8] bg-transparent text-[#94A3B8]'
+          }`}
+        >
+          {theme === 'light' && <div className="absolute top-2 right-2 w-3 h-3 bg-[#3B82F6] rounded-full"></div>}
+          <Sun size={32} className={theme === 'light' ? 'text-[#3B82F6]' : ''} />
+          <span className="font-bold">Light Mode</span>
+        </button>
+
+        {/* Dark Mode */}
+        <button 
+          onClick={() => handleThemeChange('dark')}
+          className={`flex flex-col items-center p-6 rounded-xl border-2 transition-all gap-3 relative overflow-hidden cursor-pointer ${
+            theme === 'dark'
+              ? 'border-[#3B82F6] bg-[#09133E] text-[#FFFFFF]'
+              : 'border-[#1E2A68] hover:border-[#94A3B8] bg-transparent text-[#94A3B8]'
+          }`}
+        >
+          {theme === 'dark' && <div className="absolute top-2 right-2 w-3 h-3 bg-[#3B82F6] rounded-full"></div>}
+          <Moon size={32} className={theme === 'dark' ? 'text-[#3B82F6]' : ''} />
+          <span className="font-bold">Dark Mode</span>
+        </button>
+
+        {/* System Sync */}
+        <button 
+          onClick={() => handleThemeChange('system')}
+          className={`flex flex-col items-center p-6 rounded-xl border-2 transition-all gap-3 relative overflow-hidden cursor-pointer ${
+            theme === 'system'
+              ? 'border-[#3B82F6] bg-[#09133E] text-[#FFFFFF]'
+              : 'border-[#1E2A68] hover:border-[#94A3B8] bg-transparent text-[#94A3B8]'
+          }`}
+        >
+          {theme === 'system' && <div className="absolute top-2 right-2 w-3 h-3 bg-[#3B82F6] rounded-full"></div>}
+          <Monitor size={32} className={theme === 'system' ? 'text-[#3B82F6]' : ''} />
+          <span className="font-bold">System Sync</span>
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const UserSettings = () => {
+  const navigate = useNavigate();
   const currentUser = JSON.parse(localStorage.getItem('credscore_current_user') || '{}');
+
+  const [myNotifs, setMyNotifs] = useState(() => {
+    const allNotifs = getNotifications() || [];
+    return allNotifs.filter(n => n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL')));
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const freshNotifs = getNotifications() || [];
+      setMyNotifs(freshNotifs.filter(n => n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL'))));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [currentUser.role, currentUser.id]);
+
+  const handleNotifClick = (notif) => {
+    const fullNotifs = getNotifications();
+    const updated = fullNotifs.map(n => {
+      if (n.id === notif.id) {
+        return { ...n, read: true };
+      }
+      return n;
+    });
+    saveNotifications(updated);
+    
+    // Update local state directly so it re-renders instantly without a full page reload!
+    setMyNotifs(updated.filter(n => n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL'))));
+
+    // Navigate appropriately
+    const title = notif.title.toLowerCase();
+    if (title.includes('login') || title.includes('welcome') || title.includes('logout')) {
+      navigate('/user-dashboard');
+    } else if (title.includes('apply') || title.includes('submit') || title.includes('created')) {
+      navigate('/user/history');
+    } else if (title.includes('decision') || title.includes('approve') || title.includes('reject') || title.includes('active') || title.includes('agreement') || title.includes('signed')) {
+      navigate('/user/decision');
+    } else if (title.includes('profile') || title.includes('password') || title.includes('settings')) {
+      navigate('/user/settings');
+    } else if (title.includes('score') || title.includes('recalculate')) {
+      navigate('/user/score');
+    } else if (title.includes('support') || title.includes('ticket')) {
+      navigate('/user/support');
+    } else {
+      navigate('/user-dashboard');
+    }
+  };
+
   const [activeTab, setActiveTab] = useState('profile');
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -16,9 +132,6 @@ const UserSettings = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  const allNotifs = getNotifications() || [];
-  const myNotifs = allNotifs.filter(n => n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL')));
 
   const [firstName, setFirstName] = useState(currentUser.name ? currentUser.name.split(' ')[0] : '');
   const [lastName, setLastName] = useState(currentUser.name ? currentUser.name.split(' ').slice(1).join(' ') : '');
@@ -127,21 +240,27 @@ const UserSettings = () => {
           <div className="bg-[#101B57] rounded-2xl border border-[#1E2A68] overflow-hidden flex flex-col">
             <button 
               onClick={() => setActiveTab('profile')}
-              className={`flex items-center gap-3 px-6 py-4 text-sm font-medium transition-colors border-l-2 ${activeTab === 'profile' ? 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]' : 'text-[#94A3B8] border-transparent hover:bg-[#050B2D] hover:text-[#FFFFFF]'}`}
+              className={`flex items-center gap-3 px-6 py-4 text-sm font-medium transition-colors border-l-2 ${activeTab === 'profile' ? 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]' : 'text-[#94A3B8] border-transparent hover:bg-[#1E2A68]/50 hover:text-[#FFFFFF]'}`}
             >
               <User size={18} /> Profile Details
             </button>
             <button 
               onClick={() => setActiveTab('security')}
-              className={`flex items-center gap-3 px-6 py-4 text-sm font-medium transition-colors border-l-2 ${activeTab === 'security' ? 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]' : 'text-[#94A3B8] border-transparent hover:bg-[#050B2D] hover:text-[#FFFFFF]'}`}
+              className={`flex items-center gap-3 px-6 py-4 text-sm font-medium transition-colors border-l-2 ${activeTab === 'security' ? 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]' : 'text-[#94A3B8] border-transparent hover:bg-[#1E2A68]/50 hover:text-[#FFFFFF]'}`}
             >
               <Lock size={18} /> Password & Security
             </button>
             <button 
               onClick={() => setActiveTab('notifications')}
-              className={`flex items-center gap-3 px-6 py-4 text-sm font-medium transition-colors border-l-2 ${activeTab === 'notifications' ? 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]' : 'text-[#94A3B8] border-transparent hover:bg-[#050B2D] hover:text-[#FFFFFF]'}`}
+              className={`flex items-center gap-3 px-6 py-4 text-sm font-medium transition-colors border-l-2 ${activeTab === 'notifications' ? 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]' : 'text-[#94A3B8] border-transparent hover:bg-[#1E2A68]/50 hover:text-[#FFFFFF]'}`}
             >
               <Bell size={18} /> Notifications
+            </button>
+            <button 
+              onClick={() => setActiveTab('appearance')}
+              className={`flex items-center gap-3 px-6 py-4 text-sm font-medium transition-colors border-l-2 ${activeTab === 'appearance' ? 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]' : 'text-[#94A3B8] border-transparent hover:bg-[#1E2A68]/50 hover:text-[#FFFFFF]'}`}
+            >
+              <Moon size={18} /> Appearance
             </button>
           </div>
         </div>
@@ -218,7 +337,7 @@ const UserSettings = () => {
                 <div>
                   <label className="block text-sm font-medium text-[#94A3B8] mb-2">Current Password</label>
                   <div className="relative">
-                    <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="••••••••" className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-xl pl-4 pr-10 py-3 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" />
+                    <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-xl pl-4 pr-10 py-3 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" />
                     <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#FFFFFF] transition-colors">
                       {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -227,7 +346,7 @@ const UserSettings = () => {
                 <div>
                   <label className="block text-sm font-medium text-[#94A3B8] mb-2">New Password</label>
                   <div className="relative">
-                    <input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-xl pl-4 pr-10 py-3 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" />
+                    <input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-xl pl-4 pr-10 py-3 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" />
                     <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#FFFFFF] transition-colors">
                       {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -236,7 +355,7 @@ const UserSettings = () => {
                 <div>
                   <label className="block text-sm font-medium text-[#94A3B8] mb-2">Confirm New Password</label>
                   <div className="relative">
-                    <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-xl pl-4 pr-10 py-3 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" />
+                    <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-xl pl-4 pr-10 py-3 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" />
                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#FFFFFF] transition-colors">
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -258,7 +377,7 @@ const UserSettings = () => {
               <h2 className="text-xl font-bold text-[#FFFFFF] mb-6">Recent Notifications</h2>
               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                 {myNotifs.length > 0 ? myNotifs.map(n => (
-                  <div key={n.id} className="p-4 bg-[#050B2D] border border-[#1E2A68] rounded-xl flex items-start gap-4">
+                  <div key={n.id} onClick={() => handleNotifClick(n)} className={`p-4 bg-[#050B2D] hover:bg-[#0A1445]/30 cursor-pointer border border-[#1E2A68] rounded-xl flex items-start gap-4 transition-colors ${!n.read ? 'border-[#3B82F6]/40' : 'opacity-70'}`}>
                     <div className="mt-1">
                       {n.type === 'success' && <CheckCircle2 className="text-[#10B981]" size={20} />}
                       {n.type === 'error' && <AlertCircle className="text-[#EF4444]" size={20} />}
@@ -276,6 +395,10 @@ const UserSettings = () => {
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === 'appearance' && (
+            <AppearanceSettingsTab />
           )}
         </div>
       </div>

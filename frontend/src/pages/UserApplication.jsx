@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import UserLayout from '../components/UserLayout';
 import { Loader2, CheckCircle2 } from 'lucide-react';
-import { getApplications, saveApplications, addNotification, calculateUserCreditScore } from '../utils/dataStore';
+import { submitApplication, createNotification } from '../utils/dataStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const UserApplication = () => {
@@ -29,50 +29,39 @@ const UserApplication = () => {
 
   const currentInterestRate = getInterestRate(formData.purpose);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    setTimeout(() => {
-      const apps = getApplications() || [];
+    try {
       const newApp = {
         id: `APP-9${Math.floor(1000 + Math.random() * 9000)}`,
         userId: currentUser.id || 'USR-UNKNOWN',
         name: currentUser.name || 'Applicant User',
         amount: `$${parseInt(formData.amount.replace(/\D/g, '') || '0').toLocaleString()}`,
-        score: 0, // Will calculate below
-        risk: 'Pending',
+        score: 0, // In production, backend calculates this
+        risk: 'Medium', // Valid enum value for Mongoose schema
         status: 'Pending',
         date: new Date().toISOString().split('T')[0],
         purpose: formData.purpose,
         tenure: formData.tenure,
         interestRate: currentInterestRate,
-        income: formData.income,
+        income: parseInt(formData.income) || 0,
         employment: formData.employment
       };
 
-      const tempApps = [newApp, ...apps];
-      saveApplications(tempApps);
+      await submitApplication(newApp);
       
-      // Now that the new application (with its income/employment data) is in localStorage,
-      // calculate the highly accurate deterministic credit score for this user
-      const calculatedScore = calculateUserCreditScore(currentUser.id);
+      await createNotification('Admin', 'ALL', 'New Application Submitted', `${newApp.name} submitted application ${newApp.id} for ${newApp.amount}.`, 'info');
+      await createNotification(currentUser.role, currentUser.id, 'Application Successful', `Your application ${newApp.id} has been securely submitted.`, 'success');
       
-      // Update the application with the mathematically correct score and risk
-      tempApps[0].score = calculatedScore !== 'N/A' ? calculatedScore : 650;
-      tempApps[0].risk = tempApps[0].score > 720 ? 'Low' : (tempApps[0].score > 620 ? 'Medium' : 'High');
-      
-      saveApplications(tempApps);
-      
-      addNotification('Admin', 'ALL', 'New Application Submitted', `${newApp.name} submitted application ${newApp.id} for ${newApp.amount}.`, 'info');
-      addNotification(currentUser.role, currentUser.id, 'Application Successful', `Your application ${newApp.id} has been securely submitted.`, 'success');
-      
-      // Notify about credit score update
-      addNotification(currentUser.role, currentUser.id, 'Credit Score Updated', 'Your credit score has been recalculated based on your recent financial activity.', 'info');
-
       setIsSubmitting(false);
       navigate('/user-dashboard');
-    }, 1500);
+    } catch (err) {
+      console.error(err);
+      setIsSubmitting(false);
+      alert('Failed to submit application. Is the backend running?');
+    }
   };
 
   return (

@@ -22,43 +22,39 @@ const AdminApplicantProfile = () => {
     activeLoans: 0
   };
 
-  // Try to find the applicant in dataStore
-  const getApplicantData = () => {
-    const applicants = getUsers();
-    if (applicants) {
-      const found = applicants.find(app => app.id === id);
-      if (found) return found;
-    }
-    return location.state?.applicant || defaultApplicant;
-  };
-
-  const [formData, setFormData] = useState(getApplicantData());
+  const [formData, setFormData] = useState(defaultApplicant);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  React.useEffect(() => {
+    const loadUser = async () => {
+      const res = await fetch(`http://localhost:5000/api/users/${id}`);
+      if (res.ok) {
+        setFormData(await res.json());
+      } else if (location.state?.applicant) {
+        setFormData(location.state.applicant);
+      }
+    };
+    loadUser();
+  }, [id, location.state]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
     
-    // Save to dataStore
-    let applicants = getUsers() || [];
-    const index = applicants.findIndex(app => app.id === formData.id);
-    if (index !== -1) {
-      applicants[index] = formData;
-    } else {
-      applicants.push(formData);
-    }
-    saveUsers(applicants);
+    await fetch(`http://localhost:5000/api/users/${formData.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    }).catch(console.error);
 
-    setTimeout(() => {
-      setIsSaving(false);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    }, 800);
+    setIsSaving(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   return (

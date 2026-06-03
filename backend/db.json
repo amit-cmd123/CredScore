@@ -1,0 +1,370 @@
+{
+  "users": [
+    {
+      "id": "USR-ADMIN",
+      "name": "Super Admin",
+      "email": "admin@credscore.com",
+      "password": "password123",
+      "role": "Admin",
+      "phone": "+1 (555) 999-9999",
+      "location": "Headquarters",
+      "income": "$150,000",
+      "employer": "CredScore Inc.",
+      "activeLoans": 0
+    },
+    {
+      "id": "USR-ALICE",
+      "name": "Alice Smith",
+      "email": "alice@gmail.com",
+      "password": "password123",
+      "role": "User",
+      "phone": "+1 (555) 123-4567",
+      "location": "New York, NY",
+      "income": "$120,000",
+      "employer": "Google LLC",
+      "activeLoans": 1
+    },
+    {
+      "id": "USR-BOB",
+      "name": "Bob Johnson",
+      "email": "bob@yahoo.com",
+      "password": "password123",
+      "role": "User",
+      "phone": "+1 (555) 234-5678",
+      "location": "San Francisco, CA",
+      "income": "$85,000",
+      "employer": "Meta Platforms",
+      "activeLoans": 0
+    },
+    {
+      "id": "USR-CHARLIE",
+      "name": "Charlie Brown",
+      "email": "charlie@outlook.com",
+      "password": "password123",
+      "role": "User",
+      "phone": "+1 (555) 345-6789",
+      "location": "Seattle, WA",
+      "income": "$45,000",
+      "employer": "Self-employed",
+      "activeLoans": 0
+    },
+    {
+      "id": "USR-9165",
+      "name": "Amit",
+      "email": "amit@gmail.com",
+      "password": "Amit@2026",
+      "role": "User",
+      "phone": "+1 (555) 448-8863",
+      "location": "New York, NY",
+      "income": "$114,000",
+      "employer": "Self-Employed",
+      "activeLoans": 0
+    },
+    {
+      "id": "USR-9598",
+      "name": "Nithin",
+      "email": "nithin@gmail.com",
+      "password": "Nithin@2005",
+      "role": "Admin",
+      "phone": "+1 (555) 311-8957",
+      "location": "New York, NY",
+      "income": "$114,000",
+      "employer": "Self-Employed",
+      "activeLoans": 0
+    }
+  ],
+  "applications": [
+    {
+      "id": "APP-99767",
+      "userId": "USR-9165",
+      "name": "Amit",
+      "amount": "$20,000",
+      "score": 715,
+      "risk": "Medium",
+      "status": "Active",
+      "date": "2026-06-03",
+      "purpose": "Home",
+      "tenure": "12",
+      "interestRate": 6.5,
+      "income": "10000",
+      "employment": "Full-time"
+    },
+    {
+      "id": "APP-9281",
+      "userId": "USR-ALICE",
+      "name": "Alice Smith",
+      "amount": "$50,000",
+      "score": 780,
+      "risk": "Low",
+      "status": "Approved",
+      "date": "2026-05-10",
+      "purpose": "Business",
+      "tenure": "36",
+      "interestRate": 10.5,
+      "income": 10000,
+      "employment": "Full-time"
+    },
+    {
+      "id": "APP-9342",
+      "userId": "USR-BOB",
+      "name": "Bob Johnson",
+      "amount": "$25,000",
+      "score": 680,
+      "risk": "Medium",
+      "status": "Pending",
+      "date": "2026-05-24",
+      "purpose": "Auto",
+      "tenure": "60",
+      "interestRate": 8.5,
+      "income": 7000,
+      "employment": "Full-time"
+    },
+    {
+      "id": "APP-9451",
+      "userId": "USR-CHARLIE",
+      "name": "Charlie Brown",
+      "amount": "$15,000",
+      "score": 550,
+      "risk": "High",
+      "status": "Rejected",
+      "date": "2026-05-18",
+      "purpose": "Personal",
+      "tenure": "24",
+      "interestRate": 12.5,
+      "income": 3000,
+      "employment": "Self-employed"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "NOTIF-1780462236398-466",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Login Successful",
+      "desc": "Welcome back to CredScore! You have successfully logged in.",
+      "type": "success",
+      "time": "2026-06-03T04:50:36.398Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780462205325-323",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Logged Out",
+      "desc": "You have successfully logged out of your account.",
+      "type": "info",
+      "time": "2026-06-03T04:50:05.325Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780462050991-535",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Login Successful",
+      "desc": "Welcome back to CredScore! You have successfully logged in.",
+      "type": "success",
+      "time": "2026-06-03T04:47:30.991Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780461088716-781",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Logged Out",
+      "desc": "You have successfully logged out of your account.",
+      "type": "info",
+      "time": "2026-06-03T04:31:28.716Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780461007183-524",
+      "targetRole": "Admin",
+      "targetUserId": "ALL",
+      "title": "Loan Agreement Signed",
+      "desc": "Amit signed the agreement for loan APP-99767.",
+      "type": "success",
+      "time": "2026-06-03T04:30:07.183Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460985469-309",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Login Successful",
+      "desc": "Welcome back to CredScore! You have successfully logged in.",
+      "type": "success",
+      "time": "2026-06-03T04:29:45.469Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460960218-80",
+      "targetRole": "Admin",
+      "targetUserId": "USR-9598",
+      "title": "Logged Out",
+      "desc": "You have successfully logged out of your account.",
+      "type": "info",
+      "time": "2026-06-03T04:29:20.218Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460430965-790",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Loan Application Approved",
+      "desc": "Your application APP-99767 has been approved by an underwriter.",
+      "type": "success",
+      "time": "2026-06-03T04:20:30.965Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460417264-919",
+      "targetRole": "Admin",
+      "targetUserId": "ALL",
+      "title": "New User Registered",
+      "desc": "Nithin just registered as a Admin.",
+      "type": "info",
+      "time": "2026-06-03T04:20:17.264Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460417263-637",
+      "targetRole": "Admin",
+      "targetUserId": "USR-9598",
+      "title": "Welcome to CredScore!",
+      "desc": "Your account has been created successfully.",
+      "type": "success",
+      "time": "2026-06-03T04:20:17.263Z",
+      "read": true
+    },
+    {
+      "id": "NOTIF-1780460353108-542",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Logged Out",
+      "desc": "You have successfully logged out of your account.",
+      "type": "info",
+      "time": "2026-06-03T04:19:13.108Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460349135-10",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Login Successful",
+      "desc": "Welcome back to CredScore! You have successfully logged in.",
+      "type": "success",
+      "time": "2026-06-03T04:19:09.135Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460331859-395",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Logged Out",
+      "desc": "You have successfully logged out of your account.",
+      "type": "info",
+      "time": "2026-06-03T04:18:51.859Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460326264-68",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Password Updated",
+      "desc": "Your security password was successfully changed.",
+      "type": "success",
+      "time": "2026-06-03T04:18:46.264Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460078796-770",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Credit Score Updated",
+      "desc": "Your credit score has been recalculated based on your recent financial activity.",
+      "type": "info",
+      "time": "2026-06-03T04:14:38.796Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460078794-838",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Application Successful",
+      "desc": "Your application APP-99767 has been securely submitted.",
+      "type": "success",
+      "time": "2026-06-03T04:14:38.794Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460078792-673",
+      "targetRole": "Admin",
+      "targetUserId": "ALL",
+      "title": "New Application Submitted",
+      "desc": "Amit submitted application APP-99767 for $20,000.",
+      "type": "info",
+      "time": "2026-06-03T04:14:38.792Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1780460031335-626",
+      "targetRole": "Admin",
+      "targetUserId": "ALL",
+      "title": "New User Registered",
+      "desc": "Amit just registered as a User.",
+      "type": "info",
+      "time": "2026-06-03T04:13:51.336Z",
+      "read": true
+    },
+    {
+      "id": "NOTIF-1780460031313-43",
+      "targetRole": "User",
+      "targetUserId": "USR-9165",
+      "title": "Welcome to CredScore!",
+      "desc": "Your account has been created successfully.",
+      "type": "success",
+      "time": "2026-06-03T04:13:51.313Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1779949701648-155",
+      "targetRole": "Admin",
+      "targetUserId": "USR-9678",
+      "title": "Logged Out",
+      "desc": "You have successfully logged out of your account.",
+      "type": "info",
+      "time": "2026-05-28T06:28:21.648Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-1",
+      "targetRole": "Admin",
+      "targetUserId": "ALL",
+      "title": "New Application Submitted",
+      "desc": "Bob Johnson submitted application APP-9342 for $25,000.",
+      "type": "info",
+      "time": "2026-05-24T10:00:00.000Z",
+      "read": false
+    },
+    {
+      "id": "NOTIF-2",
+      "targetRole": "User",
+      "targetUserId": "USR-ALICE",
+      "title": "Loan Application Approved",
+      "desc": "Your application APP-9281 has been approved by an underwriter.",
+      "type": "success",
+      "time": "2026-05-10T14:30:00.000Z",
+      "read": true
+    },
+    {
+      "id": "NOTIF-3",
+      "targetRole": "User",
+      "targetUserId": "USR-CHARLIE",
+      "title": "Loan Application Rejected",
+      "desc": "Your application APP-9451 has been rejected by an underwriter.",
+      "type": "error",
+      "time": "2026-05-18T09:15:00.000Z",
+      "read": false
+    }
+  ]
+}

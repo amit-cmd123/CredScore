@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -40,6 +41,20 @@ const ProtectedRoute = ({ children, allowedRole }) => {
 };
 
 function App() {
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleChange = () => {
+      const savedTheme = localStorage.getItem('credscore_theme') || 'light';
+      if (savedTheme === 'system') {
+        document.documentElement.className = mediaQuery.matches ? 'dark-theme' : 'light-theme';
+      }
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   return (
     <Router>
       <Routes>

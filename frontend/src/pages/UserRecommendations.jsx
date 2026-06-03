@@ -2,6 +2,7 @@ import React from 'react';
 import UserLayout from '../components/UserLayout';
 import { Home, Car, CreditCard, ArrowRight, Briefcase, Activity, Plane } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { fetchUserCreditScore } from '../utils/dataStore';
 
 const recommendations = [
   {
@@ -48,12 +49,33 @@ const recommendations = [
 
 const UserRecommendations = () => {
   const navigate = useNavigate();
+  const currentUser = JSON.parse(localStorage.getItem('credscore_current_user') || '{}');
+  const [currentScore, setCurrentScore] = React.useState('Loading...');
+
+  React.useEffect(() => {
+    const loadScore = async () => {
+      const score = await fetchUserCreditScore(currentUser.id);
+      setCurrentScore(score);
+    };
+    loadScore();
+  }, [currentUser.id]);
+
+  const getScoreRatingText = (score) => {
+    if (score === 'N/A') return 'Established';
+    const s = parseInt(score);
+    if (s >= 750) return 'Excellent';
+    if (s >= 700) return 'Good';
+    if (s >= 650) return 'Fair';
+    return 'Poor';
+  };
+
+  const ratingText = getScoreRatingText(currentScore).toLowerCase();
 
   return (
     <UserLayout>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#FFFFFF] mb-2 tracking-tight">Personalized Recommendations</h1>
-        <p className="text-[#94A3B8]">Financial products tailored to your excellent credit profile.</p>
+        <p className="text-[#94A3B8]">Financial products tailored to your {ratingText} credit profile.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

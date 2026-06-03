@@ -1,21 +1,33 @@
 import React from 'react';
 import UserLayout from '../components/UserLayout';
-import { getApplications, calculateUserCreditScore } from '../utils/dataStore';
+import { fetchApplications, fetchUserCreditScore } from '../utils/dataStore';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 const UserScore = () => {
   const currentUser = JSON.parse(localStorage.getItem('credscore_current_user') || '{}');
-  const apps = getApplications().filter(a => a.userId === currentUser.id);
-  const currentScore = calculateUserCreditScore(currentUser.id);
+  
+  const [apps, setApps] = React.useState([]);
+  const [currentScore, setCurrentScore] = React.useState('Loading...');
 
-  const scorePercentage = currentScore !== 'N/A' ? (currentScore / 900) * 100 : 0;
+  React.useEffect(() => {
+    const loadData = async () => {
+      const fetchedApps = await fetchApplications(currentUser.id);
+      setApps(fetchedApps);
+      
+      const score = await fetchUserCreditScore(currentUser.id);
+      setCurrentScore(score);
+    };
+    loadData();
+  }, [currentUser.id]);
+
+  const scorePercentage = (currentScore !== 'N/A' && currentScore !== 'Loading...') ? (currentScore / 900) * 100 : 0;
   
   let category = '';
   let color = '';
   if (currentScore === 'N/A') { category = 'Not Established'; color = '#94A3B8'; }
-  else if (currentScore >= 800) { category = 'Excellent'; color = '#10B981'; }
+  else if (currentScore >= 750) { category = 'Excellent'; color = '#10B981'; }
   else if (currentScore >= 700) { category = 'Good'; color = '#3B82F6'; }
-  else if (currentScore >= 600) { category = 'Fair'; color = '#FACC15'; }
+  else if (currentScore >= 650) { category = 'Fair'; color = '#FACC15'; }
   else { category = 'Poor'; color = '#EF4444'; }
 
   return (
@@ -154,6 +166,56 @@ const UserScore = () => {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Credit Score Guide */}
+      <div className="bg-[#101B57] rounded-2xl p-8 border border-[#1E2A68] mt-8">
+        <h2 className="text-xl font-bold text-[#FFFFFF] mb-6">Credit Score Guide</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {/* Excellent */}
+          <div className="bg-[#050B2D] p-5 rounded-xl border border-[#1E2A68] hover:border-[#10B981]/50 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">Excellent</span>
+                <span className="text-sm font-bold text-[#10B981]">750 - 900</span>
+              </div>
+              <p className="text-xs text-[#94A3B8] leading-relaxed">You are a low-risk borrower. You get top-tier interest rates and the best credit card offers.</p>
+            </div>
+          </div>
+
+          {/* Good */}
+          <div className="bg-[#050B2D] p-5 rounded-xl border border-[#1E2A68] hover:border-[#3B82F6]/50 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20">Good</span>
+                <span className="text-sm font-bold text-[#3B82F6]">700 - 749</span>
+              </div>
+              <p className="text-xs text-[#94A3B8] leading-relaxed">You have a solid repayment history. Most lenders will approve your loans, though interest rates might be slightly higher than the absolute best tiers.</p>
+            </div>
+          </div>
+
+          {/* Fair */}
+          <div className="bg-[#050B2D] p-5 rounded-xl border border-[#1E2A68] hover:border-[#FACC15]/50 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#FACC15]/10 text-[#FACC15] border border-[#FACC15]/20">Fair</span>
+                <span className="text-sm font-bold text-[#FACC15]">650 - 699</span>
+              </div>
+              <p className="text-xs text-[#94A3B8] leading-relaxed">You can often get approved, but expect stricter terms and higher interest rates.</p>
+            </div>
+          </div>
+
+          {/* Poor */}
+          <div className="bg-[#050B2D] p-5 rounded-xl border border-[#1E2A68] hover:border-[#EF4444]/50 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20">Poor</span>
+                <span className="text-sm font-bold text-[#EF4444]">300 - 649</span>
+              </div>
+              <p className="text-xs text-[#94A3B8] leading-relaxed">Lenders may view you as high-risk, leading to frequent loan rejections.</p>
+            </div>
+          </div>
         </div>
       </div>
     </UserLayout>

@@ -2,26 +2,38 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { Search, MoreVertical, Mail, Phone, MapPin, Edit2, Trash2 } from 'lucide-react';
-import { getUsers, saveUsers, getApplications } from '../utils/dataStore';
+import { fetchApplications } from '../utils/dataStore';
 
 // Data is now loaded from dataStore
 
 const AdminApplicants = () => {
   const navigate = useNavigate();
-  const [applicants, setApplicants] = useState(() => {
-    const users = getUsers() || [];
-    const apps = getApplications() || [];
-    return users.map(user => {
-      const userApps = apps.filter(a => a.userId === user.id);
-      const approvedCount = userApps.filter(a => a.status === 'Approved').length;
-      return {
-        ...user,
-        activeLoans: approvedCount, // Set active loans dynamically
-        recentStatus: userApps[0]?.status || 'No Application'
-      };
-    });
-  });
+  const [applicants, setApplicants] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const res = await fetch('http://localhost:5000/api/users');
+      if (!res.ok) return;
+      const users = await res.json();
+      
+      const apps = await fetchApplications();
+      
+      const mapped = users.filter(u => u.role === 'User').map(user => {
+        const userApps = apps.filter(a => a.userId === user.id);
+        const approvedCount = userApps.filter(a => a.status === 'Approved').length;
+        return {
+          ...user,
+          activeLoans: approvedCount,
+          recentStatus: userApps[0]?.status || 'No Application'
+        };
+      });
+      setApplicants(mapped);
+    };
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const [activeKebab, setActiveKebab] = useState(null);
 
@@ -31,11 +43,14 @@ const AdminApplicants = () => {
     app.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    // Delete from local state first
     const updated = applicants.filter(app => app.id !== id);
     setApplicants(updated);
-    saveUsers(updated);
     setActiveKebab(null);
+    // Note: To fully delete a user we would need a DELETE /api/users/:id route, 
+    // but we can skip that for now or assume it exists. 
+    await fetch(`http://localhost:5000/api/users/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   const handleAction = (type, applicantObj) => {

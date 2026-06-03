@@ -1,61 +1,86 @@
-import seedData from '../data/seed.json';
+// Global API Base URL
+const API_URL = 'http://localhost:5000/api';
 
-export const initGlobalData = () => {
-  // Ensure notifications array exists
-  if (!localStorage.getItem('credscore_notifications')) {
-    localStorage.setItem('credscore_notifications', JSON.stringify(seedData.notifications || []));
-  }
+// ============================================
+// Core Database API Fetchers
+// ============================================
 
-  let users = JSON.parse(localStorage.getItem('credscore_users') || 'null');
-  let applications = JSON.parse(localStorage.getItem('credscore_applications') || 'null');
-
-  let needsSave = false;
-
-  // Initialize from seed if null
-  if (!users) {
-    users = seedData.users || [];
-    needsSave = true;
-  }
-  if (!applications) {
-    applications = seedData.applications || [];
-    needsSave = true;
-  }
-
-  // Ensure default Admin exists so the user can immediately log in as admin to test
-  if (!users.some(u => u.email === 'admin@credscore.com')) {
-    users.unshift({
-      id: 'USR-ADMIN',
-      name: 'Super Admin',
-      email: 'admin@credscore.com',
-      password: 'password123',
-      role: 'Admin',
-      phone: '+1 (555) 999-9999',
-      location: 'Headquarters',
-      income: '$150,000',
-      employer: 'CredScore Inc.',
-      activeLoans: 0
-    });
-    needsSave = true;
-  }
-
-  if (needsSave) {
-    localStorage.setItem('credscore_users', JSON.stringify(users));
-    localStorage.setItem('credscore_applications', JSON.stringify(applications));
-  }
+export const fetchUsers = async () => {
+  // Not used typically unless admin, but keeping for compatibility
+  // (In a real app, admins fetch this from an /api/users endpoint)
+  const res = await fetch(`${API_URL}/users`);
+  if (!res.ok) return [];
+  return res.json();
 };
 
-export const getUsers = () => {
-  initGlobalData();
-  return JSON.parse(localStorage.getItem('credscore_users'));
+export const fetchUser = async (id) => {
+  const res = await fetch(`${API_URL}/users/${id}`);
+  if (!res.ok) throw new Error('User not found');
+  return res.json();
 };
 
-export const saveUsers = (users) => {
-  localStorage.setItem('credscore_users', JSON.stringify(users));
+export const fetchApplications = async (userId = null) => {
+  const url = userId ? `${API_URL}/applications?userId=${userId}` : `${API_URL}/applications`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  return res.json();
 };
 
-export const calculateUserCreditScore = (userId) => {
-  const apps = JSON.parse(localStorage.getItem('credscore_applications') || '[]').filter(a => a.userId === userId);
+export const submitApplication = async (data) => {
+  const res = await fetch(`${API_URL}/applications`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('Failed to submit application');
+  return res.json();
+};
+
+export const updateApplicationStatus = async (id, status) => {
+  const res = await fetch(`${API_URL}/applications/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  if (!res.ok) throw new Error('Failed to update application');
+  return res.json();
+};
+
+export const fetchNotifications = async (role, userId) => {
+  const res = await fetch(`${API_URL}/notifications?role=${role}&userId=${userId}`);
+  if (!res.ok) return [];
+  return res.json();
+};
+
+export const createNotification = async (targetRole, targetUserId, title, desc, type = 'info') => {
+  const notif = {
+    id: `NOTIF-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    targetRole,
+    targetUserId,
+    title,
+    desc,
+    type,
+    read: false,
+    time: new Date().toISOString()
+  };
   
+  await fetch(`${API_URL}/notifications`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(notif)
+  });
+};
+
+export const updateNotificationReadStatus = async (id) => {
+  await fetch(`${API_URL}/notifications/${id}/read`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' }
+  });
+};
+
+// Async version of calculate user credit score
+export const fetchUserCreditScore = async (userId) => {
+  const apps = await fetchApplications(userId);
   if (apps.length === 0) return 'N/A';
 
   let score = 550; // Base Score
@@ -100,41 +125,32 @@ export const calculateUserCreditScore = (userId) => {
   return score;
 };
 
-export const getApplications = () => {
-  initGlobalData();
-  return JSON.parse(localStorage.getItem('credscore_applications'));
-};
+// ============================================
+// LEGACY SHIMS 
+// (For components not yet migrated to async)
+// ============================================
+let _cachedApps = [];
+let _cachedNotifs = [];
+let _cachedUsers = [];
 
-export const saveApplications = (applications) => {
-  localStorage.setItem('credscore_applications', JSON.stringify(applications));
-};
+// Pre-load data so synchronous components don't immediately crash during refactor
+export const initCache = async () => {
+  try {
+    const appsRes = await fetch(`${API_URL}/applications`);
+    if (appsRes.ok) _cachedApps = await appsRes.json();
+    
+    // We can't fetch all notifs easily without user context, so we just return empty
+  } catch (e) {
+    console.warn("Failed to load cache", e);
+  }
+}
 
-export const getRecentApplications = (limit = 5) => {
-  const apps = getApplications();
-  return apps.slice(0, limit);
-};
-
-export const getNotifications = () => {
-  initGlobalData();
-  return JSON.parse(localStorage.getItem('credscore_notifications') || '[]');
-};
-
-export const saveNotifications = (notifs) => {
-  localStorage.setItem('credscore_notifications', JSON.stringify(notifs));
-};
-
-export const addNotification = (targetRole, targetUserId, title, desc, type = 'info') => {
-  const notifs = getNotifications();
-  const newNotif = {
-    id: `NOTIF-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    targetRole, // 'Admin' or 'User'
-    targetUserId, // 'ALL' or specific user id
-    title,
-    desc,
-    type, // 'info', 'success', 'warning', 'error'
-    time: new Date().toISOString(),
-    read: false
-  };
-  notifs.unshift(newNotif);
-  saveNotifications(notifs);
-};
+export const getApplications = () => _cachedApps;
+export const getRecentApplications = (limit = 5) => _cachedApps.slice(0, limit);
+export const getNotifications = () => _cachedNotifs;
+export const saveNotifications = () => {};
+export const getUsers = () => _cachedUsers;
+export const saveUsers = () => {};
+export const saveApplications = () => {};
+export const addNotification = createNotification;
+export const calculateUserCreditScore = () => 'Loading...'; // Legacy shim

@@ -2,13 +2,13 @@ import React, { useState, useMemo } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { Search, Filter, Eye, CheckCircle, XCircle, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getApplications, saveApplications, getUsers, addNotification } from '../utils/dataStore';
+import { fetchApplications, updateApplicationStatus, submitApplication, createNotification } from '../utils/dataStore';
 
 // Data is now loaded from dataStore
 
 const AdminApplications = () => {
   const navigate = useNavigate();
-  const [applications, setApplications] = useState(() => getApplications());
+  const [applications, setApplications] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
@@ -19,7 +19,19 @@ const AdminApplications = () => {
   const [newAppUserId, setNewAppUserId] = useState('');
   const [newAppAmount, setNewAppAmount] = useState('');
   const [newAppPurpose, setNewAppPurpose] = useState('Home Mortgage');
-  const allUsers = getUsers() || [];
+  const [allUsers, setAllUsers] = useState([]);
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const apps = await fetchApplications();
+      setApplications(apps);
+      const res = await fetch('http://localhost:5000/api/users');
+      if (res.ok) setAllUsers(await res.json());
+    };
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Search and Filter Logic
   const filteredApps = useMemo(() => {
@@ -40,16 +52,24 @@ const AdminApplications = () => {
   const currentApps = filteredApps.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Actions
-  const handleApprove = (id) => {
-    const updated = applications.map(app => app.id === id ? { ...app, status: 'Approved' } : app);
+  const handleApprove = async (id) => {
+    await updateApplicationStatus(id, 'Approved');
+    const updated = await fetchApplications();
     setApplications(updated);
-    saveApplications(updated);
+    const app = updated.find(a => a.id === id);
+    if (app) {
+      await createNotification('User', app.userId, 'Loan Approved!', `Congratulations! Your loan application ${id} for ${app.amount} has been approved.`, 'success');
+    }
   };
 
-  const handleReject = (id) => {
-    const updated = applications.map(app => app.id === id ? { ...app, status: 'Rejected' } : app);
+  const handleReject = async (id) => {
+    await updateApplicationStatus(id, 'Rejected');
+    const updated = await fetchApplications();
     setApplications(updated);
-    saveApplications(updated);
+    const app = updated.find(a => a.id === id);
+    if (app) {
+      await createNotification('User', app.userId, 'Loan Rejected', `Unfortunately, your loan application ${id} for ${app.amount} has been rejected.`, 'error');
+    }
   };
 
   const handleView = (app) => {
@@ -57,7 +77,7 @@ const AdminApplications = () => {
     navigate('/admin/decisions', { state: { applicant: app } });
   };
 
-  const handleCreateApplication = (e) => {
+  const handleCreateApplication = async (e) => {
     e.preventDefault();
     if (!newAppUserId || !newAppAmount) return;
 
@@ -70,18 +90,18 @@ const AdminApplications = () => {
       name: selectedUser.name,
       amount: `$${parseInt(newAppAmount.replace(/\D/g, '') || '0').toLocaleString()}`,
       score: Math.floor(Math.random() * (850 - 550 + 1) + 550),
-      risk: 'Pending',
+      risk: 'Medium',
       status: 'Pending',
       date: new Date().toISOString().split('T')[0]
     };
 
-    const updatedApps = [newApp, ...applications];
-    setApplications(updatedApps);
-    saveApplications(updatedApps);
+    await submitApplication(newApp);
+    const apps = await fetchApplications();
+    setApplications(apps);
     
     // Notifications
-    addNotification('Admin', 'ALL', 'New Application Created', `Admin created application ${newApp.id} for ${newApp.name}.`, 'info');
-    addNotification('User', selectedUser.id, 'Application Submitted', `An admin has submitted application ${newApp.id} on your behalf.`, 'success');
+    await createNotification('Admin', 'ALL', 'New Application Created', `Admin created application ${newApp.id} for ${newApp.name}.`, 'info');
+    await createNotification('User', selectedUser.id, 'Application Submitted', `An admin has submitted application ${newApp.id} on your behalf.`, 'success');
 
     setShowCreateModal(false);
     setNewAppUserId('');
@@ -280,7 +300,7 @@ const AdminApplications = () => {
                   className="w-full bg-[#050B2D] border border-[#1E2A68] rounded-xl px-4 py-3 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none transition-colors appearance-none"
                 >
                   <option value="" disabled>-- Choose an existing user --</option>
-                  {allUsers.map(user => (
+                  {allUsers.filter(u => u.role === 'User').map(user => (
                     <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
                   ))}
                 </select>

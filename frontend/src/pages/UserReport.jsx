@@ -1,12 +1,24 @@
 import React from 'react';
 import UserLayout from '../components/UserLayout';
-import { getApplications, calculateUserCreditScore } from '../utils/dataStore';
+import { fetchApplications, fetchUserCreditScore } from '../utils/dataStore';
 import { Download, FileText, CheckCircle } from 'lucide-react';
 
 const UserReport = () => {
   const currentUser = JSON.parse(localStorage.getItem('credscore_current_user') || '{}');
-  const apps = getApplications().filter(a => a.userId === currentUser.id);
-  const currentScore = calculateUserCreditScore(currentUser.id);
+  const [apps, setApps] = React.useState([]);
+  const [currentScore, setCurrentScore] = React.useState('Loading...');
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const fetchedApps = await fetchApplications(currentUser.id);
+      setApps(fetchedApps);
+      
+      const score = await fetchUserCreditScore(currentUser.id);
+      setCurrentScore(score);
+    };
+    loadData();
+  }, [currentUser.id]);
+
   const reportId = `CR-${currentUser.id?.replace('USR-', '') || '0000'}-2023`;
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 

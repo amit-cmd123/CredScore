@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import UserLayout from '../components/UserLayout';
-import { getApplications, saveApplications, addNotification } from '../utils/dataStore';
+import { fetchApplications, updateApplicationStatus, createNotification } from '../utils/dataStore';
 import { CheckCircle2, XCircle, Clock, FileCheck, Search, PenTool, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -17,16 +17,21 @@ const UserDecision = () => {
   const [signError, setSignError] = useState('');
 
   useEffect(() => {
-    const userApps = getApplications().filter(a => a.userId === currentUser.id);
-    setApps(userApps);
-    if (userApps.length > 0 && !selectedAppId) {
-      setSelectedAppId(userApps[0].id);
-    }
+    const loadApps = async () => {
+      const userApps = await fetchApplications(currentUser.id);
+      setApps(userApps);
+      if (userApps.length > 0 && !selectedAppId) {
+        setSelectedAppId(userApps[0].id);
+      }
+    };
+    loadApps();
+    const interval = setInterval(loadApps, 5000);
+    return () => clearInterval(interval);
   }, [currentUser.id, selectedAppId]);
 
   const activeApp = apps.find(a => a.id === selectedAppId) || (apps.length > 0 ? apps[0] : null);
 
-  const handleSignDocuments = () => {
+  const handleSignDocuments = async () => {
     if (!signature.trim() || signature.trim().toLowerCase() !== currentUser.name.toLowerCase()) {
       setSignError(`Please type your exact full name: "${currentUser.name}" to sign.`);
       return;
@@ -34,26 +39,20 @@ const UserDecision = () => {
     setSignError('');
     setIsSigning(true);
 
-    setTimeout(() => {
-      // Update app status
-      const allApps = getApplications();
-      const updatedApps = allApps.map(a => {
-        if (a.id === activeApp.id) {
-          return { ...a, status: 'Active' };
-        }
-        return a;
-      });
-      saveApplications(updatedApps);
+    try {
+      await updateApplicationStatus(activeApp.id, 'Active');
       
-      // Notify
-      addNotification('Admin', 'ALL', 'Loan Agreement Signed', `${currentUser.name} signed the agreement for loan ${activeApp.id}.`, 'success');
-      addNotification('User', currentUser.id, 'Loan Active', `Congratulations! Your loan ${activeApp.id} is now active and funds will be disbursed shortly.`, 'success');
+      await createNotification('Admin', 'ALL', 'Loan Agreement Signed', `${currentUser.name} signed the agreement for loan ${activeApp.id}.`, 'success');
+      await createNotification('User', currentUser.id, 'Loan Active', `Congratulations! Your loan ${activeApp.id} is now active and funds will be disbursed shortly.`, 'success');
 
-      // Update local state
       setApps(apps.map(a => a.id === activeApp.id ? { ...a, status: 'Active' } : a));
       setIsSigning(false);
       setShowSignModal(false);
-    }, 1500);
+    } catch (err) {
+      console.error(err);
+      setIsSigning(false);
+      setSignError('Failed to sign document due to server error.');
+    }
   };
 
   if (!activeApp) {

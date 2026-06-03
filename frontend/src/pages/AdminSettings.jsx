@@ -314,32 +314,50 @@ const SecuritySettingsTab = () => {
         
         <div>
           <label className="block text-sm font-medium text-[#94A3B8] mb-2">Current Password</label>
-          <input 
-            type="password" 
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            className="w-full bg-[#09133E] border border-[#1E2A68] rounded-lg px-4 py-2.5 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" 
-          />
+          <div className="relative">
+            <input 
+              type={showCurrentPassword ? "text" : "password"} 
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="new-password"
+              className="w-full bg-[#09133E] border border-[#1E2A68] rounded-lg pl-4 pr-10 py-2.5 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" 
+            />
+            <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#FFFFFF] transition-colors">
+              {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
         </div>
         
         <div>
           <label className="block text-sm font-medium text-[#94A3B8] mb-2">New Password</label>
-          <input 
-            type="password" 
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full bg-[#09133E] border border-[#1E2A68] rounded-lg px-4 py-2.5 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" 
-          />
+          <div className="relative">
+            <input 
+              type={showNewPassword ? "text" : "password"} 
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              className="w-full bg-[#09133E] border border-[#1E2A68] rounded-lg pl-4 pr-10 py-2.5 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" 
+            />
+            <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#FFFFFF] transition-colors">
+              {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-[#94A3B8] mb-2">Confirm New Password</label>
-          <input 
-            type="password" 
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full bg-[#09133E] border border-[#1E2A68] rounded-lg px-4 py-2.5 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" 
-          />
+          <div className="relative">
+            <input 
+              type={showConfirmPassword ? "text" : "password"} 
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              className="w-full bg-[#09133E] border border-[#1E2A68] rounded-lg pl-4 pr-10 py-2.5 text-[#FFFFFF] focus:ring-1 focus:ring-[#3B82F6] outline-none" 
+            />
+            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#FFFFFF] transition-colors">
+              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
         </div>
       </div>
       
@@ -383,7 +401,7 @@ const NotificationSettingsTab = () => {
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" className="sr-only peer" checked={emailAlerts} onChange={(e) => setEmailAlerts(e.target.checked)} />
-            <div className="w-11 h-6 bg-[#1E2A68] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+            <div className="w-11 h-6 bg-[#334155] border border-[#475569] hover:border-[#3B82F6]/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6] peer-checked:border-[#3B82F6]"></div>
           </label>
         </div>
 
@@ -394,7 +412,7 @@ const NotificationSettingsTab = () => {
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" className="sr-only peer" checked={smsAlerts} onChange={(e) => setSmsAlerts(e.target.checked)} />
-            <div className="w-11 h-6 bg-[#1E2A68] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+            <div className="w-11 h-6 bg-[#334155] border border-[#475569] hover:border-[#3B82F6]/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6] peer-checked:border-[#3B82F6]"></div>
           </label>
         </div>
 
@@ -405,7 +423,7 @@ const NotificationSettingsTab = () => {
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" className="sr-only peer" checked={newAppAlert} onChange={(e) => setNewAppAlert(e.target.checked)} />
-            <div className="w-11 h-6 bg-[#1E2A68] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6]"></div>
+            <div className="w-11 h-6 bg-[#334155] border border-[#475569] hover:border-[#3B82F6]/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3B82F6] peer-checked:border-[#3B82F6]"></div>
           </label>
         </div>
       </div>
@@ -426,6 +444,19 @@ const NotificationSettingsTab = () => {
 
 const AdminSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
+  const [theme, setTheme] = useState(localStorage.getItem('credscore_theme') || 'light');
+
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('credscore_theme', newTheme);
+    
+    if (newTheme === 'system') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.className = isDark ? 'dark-theme' : 'light-theme';
+    } else {
+      document.documentElement.className = newTheme + '-theme';
+    }
+  };
 
   const tabs = [
     { id: 'profile', name: 'Profile Settings', icon: <User size={18} /> },
@@ -467,25 +498,51 @@ const AdminSettings = () => {
           )}
 
           {activeTab === 'appearance' && (
-            <div className="space-y-6 max-w-2xl">
+            <div className="space-y-6 max-w-2xl animate-fade-in-up">
               <h2 className="text-xl font-bold text-[#FFFFFF] mb-6">Appearance</h2>
-              
               <p className="text-sm text-[#94A3B8] mb-4">Select your preferred theme for the admin portal.</p>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button className="flex flex-col items-center p-4 rounded-xl border-2 border-[#3B82F6] bg-[#09133E] text-[#FFFFFF] gap-3 relative overflow-hidden group">
-                  <div className="absolute top-2 right-2 w-3 h-3 bg-[#3B82F6] rounded-full"></div>
-                  <Moon size={32} className="text-[#3B82F6]" />
+                {/* Light Mode */}
+                <button 
+                  onClick={() => handleThemeChange('light')}
+                  className={`flex flex-col items-center p-6 rounded-xl border-2 transition-all gap-3 relative overflow-hidden cursor-pointer ${
+                    theme === 'light'
+                      ? 'border-[#3B82F6] bg-[#09133E] text-[#FFFFFF]'
+                      : 'border-[#1E2A68] hover:border-[#94A3B8] bg-transparent text-[#94A3B8]'
+                  }`}
+                >
+                  {theme === 'light' && <div className="absolute top-2 right-2 w-3 h-3 bg-[#3B82F6] rounded-full"></div>}
+                  <Sun size={32} className={theme === 'light' ? 'text-[#3B82F6]' : ''} />
+                  <span className="font-bold">Light Mode</span>
+                </button>
+
+                {/* Dark Mode */}
+                <button 
+                  onClick={() => handleThemeChange('dark')}
+                  className={`flex flex-col items-center p-6 rounded-xl border-2 transition-all gap-3 relative overflow-hidden cursor-pointer ${
+                    theme === 'dark'
+                      ? 'border-[#3B82F6] bg-[#09133E] text-[#FFFFFF]'
+                      : 'border-[#1E2A68] hover:border-[#94A3B8] bg-transparent text-[#94A3B8]'
+                  }`}
+                >
+                  {theme === 'dark' && <div className="absolute top-2 right-2 w-3 h-3 bg-[#3B82F6] rounded-full"></div>}
+                  <Moon size={32} className={theme === 'dark' ? 'text-[#3B82F6]' : ''} />
                   <span className="font-bold">Dark Mode</span>
                 </button>
-                <button className="flex flex-col items-center p-4 rounded-xl border border-[#1E2A68] hover:border-[#94A3B8] bg-[#09133E] text-[#94A3B8] gap-3 transition-colors opacity-50 cursor-not-allowed">
-                  <Sun size={32} />
-                  <span className="font-medium">Light Mode</span>
-                  <span className="text-[10px] absolute bottom-2">Coming soon</span>
-                </button>
-                <button className="flex flex-col items-center p-4 rounded-xl border border-[#1E2A68] hover:border-[#94A3B8] bg-[#09133E] text-[#94A3B8] gap-3 transition-colors opacity-50 cursor-not-allowed">
-                  <Monitor size={32} />
-                  <span className="font-medium">System Sync</span>
+
+                {/* System Sync */}
+                <button 
+                  onClick={() => handleThemeChange('system')}
+                  className={`flex flex-col items-center p-6 rounded-xl border-2 transition-all gap-3 relative overflow-hidden cursor-pointer ${
+                    theme === 'system'
+                      ? 'border-[#3B82F6] bg-[#09133E] text-[#FFFFFF]'
+                      : 'border-[#1E2A68] hover:border-[#94A3B8] bg-transparent text-[#94A3B8]'
+                  }`}
+                >
+                  {theme === 'system' && <div className="absolute top-2 right-2 w-3 h-3 bg-[#3B82F6] rounded-full"></div>}
+                  <Monitor size={32} className={theme === 'system' ? 'text-[#3B82F6]' : ''} />
+                  <span className="font-bold">System Sync</span>
                 </button>
               </div>
             </div>

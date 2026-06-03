@@ -3,14 +3,25 @@ import UserLayout from '../components/UserLayout';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Lightbulb, PieChart as PieChartIcon } from 'lucide-react';
 
-import { getApplications, calculateUserCreditScore } from '../utils/dataStore';
+import { fetchApplications, fetchUserCreditScore } from '../utils/dataStore';
 
 const UserAnalytics = () => {
   const currentUser = JSON.parse(localStorage.getItem('credscore_current_user') || '{}');
-  const userApps = getApplications().filter(a => a.userId === currentUser.id);
+  const [userApps, setUserApps] = React.useState([]);
+  const [currentScore, setCurrentScore] = React.useState('Loading...');
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const apps = await fetchApplications(currentUser.id);
+      setUserApps(apps);
+      
+      const score = await fetchUserCreditScore(currentUser.id);
+      setCurrentScore(score);
+    };
+    loadData();
+  }, [currentUser.id]);
   
-  const currentScore = calculateUserCreditScore(currentUser.id);
-  const numericScore = currentScore === 'N/A' ? 650 : parseInt(currentScore, 10);
+  const numericScore = currentScore === 'N/A' || currentScore === 'Loading...' ? 650 : parseInt(currentScore, 10);
   
   // Dynamically calculate total active debt from user apps
   const totalActiveDebt = userApps

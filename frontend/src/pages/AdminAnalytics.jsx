@@ -2,12 +2,27 @@ import React, { useMemo } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
-import { getApplications, getUsers } from '../utils/dataStore';
+import { fetchApplications } from '../utils/dataStore';
 
 
 const AdminAnalytics = () => {
-  const apps = getApplications() || [];
-  const users = getUsers() || [];
+  const [apps, setApps] = React.useState([]);
+  const [users, setUsers] = React.useState([]);
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const fetchedApps = await fetchApplications();
+      setApps(fetchedApps);
+      
+      const res = await fetch('http://localhost:5000/api/users');
+      if (res.ok) {
+        setUsers(await res.json());
+      }
+    };
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, []);
   
   const stats = useMemo(() => {
     const syntheticVolume = 4500000;
@@ -28,7 +43,7 @@ const AdminAnalytics = () => {
       volume: `$${(totalVolume / 1000000).toFixed(1)}M`,
       avgScore: avgScore.toString(),
       approvalRate: `${approvalRate}%`,
-      newUsers: (baseUsers + users.length).toString()
+      newUsers: (baseUsers + users.filter(u => u.role === 'User').length).toString()
     };
   }, [apps, users]);
 

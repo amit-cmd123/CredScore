@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { Download, FileText, Search, CreditCard, Activity, Calendar } from 'lucide-react';
 
-import { getUsers, getApplications, calculateUserCreditScore } from '../utils/dataStore';
+import { fetchUserCreditScore, fetchApplications } from '../utils/dataStore';
 
 // Generate realistic mock history for a user based on their data
 const generateUserHistory = (user, apps) => {
@@ -60,33 +60,54 @@ const generateFinancials = (user) => {
 };
 
 const AdminReports = () => {
-  const users = getUsers() || [];
-  const apps = getApplications() || [];
+  const [users, setUsers] = useState([]);
+  const [apps, setApps] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(() => {
-    const user = users[0];
-    const userApps = apps.filter(a => a.userId === user.id);
-    return {
-      ...user,
-      reportId: userApps.length > 0 ? userApps[0].id : `CR-${user.id.replace('USR-', '')}-2023`,
-      score: calculateUserCreditScore(user.id),
-      history: generateUserHistory(user, apps),
-      financials: generateFinancials(user)
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const fetchedApps = await fetchApplications();
+      setApps(fetchedApps);
+      
+      const res = await fetch('http://localhost:5000/api/users');
+      if (res.ok) {
+        const fetchedUsers = await res.json();
+        const regularUsers = fetchedUsers.filter(u => u.role === 'User');
+        setUsers(regularUsers);
+        
+        if (!selectedUser && regularUsers.length > 0) {
+          const user = regularUsers[0];
+          const userApps = fetchedApps.filter(a => a.userId === user.id);
+          const score = await fetchUserCreditScore(user.id);
+          setSelectedUser({
+            ...user,
+            reportId: userApps.length > 0 ? userApps[0].id : `CR-${user.id.replace('USR-', '')}-2023`,
+            score: score,
+            history: generateUserHistory(user, fetchedApps),
+            financials: generateFinancials(user)
+          });
+        }
+      }
     };
-  });
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, [selectedUser]);
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     u.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSelectUser = (user) => {
+  const handleSelectUser = async (user) => {
     const userApps = apps.filter(a => a.userId === user.id);
+    const score = await fetchUserCreditScore(user.id);
     setSelectedUser({
       ...user,
       reportId: userApps.length > 0 ? userApps[0].id : `CR-${user.id.replace('USR-', '')}-2023`,
-      score: calculateUserCreditScore(user.id),
+      score: score,
       history: generateUserHistory(user, apps),
       financials: generateFinancials(user)
     });
@@ -150,107 +171,115 @@ const AdminReports = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in-up" key={selectedUser.id}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in-up" key={selectedUser?.id || 'loading'}>
         {/* Main Report Area */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-[#101B57] rounded-2xl border border-[#1E2A68] p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#3B82F6]/5 rounded-bl-full"></div>
-            
-            <div className="flex items-center justify-between gap-4 mb-8 border-b border-[#1E2A68] pb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-[#09133E] rounded-full flex items-center justify-center text-2xl font-bold text-[#FFFFFF] border-2 border-[#3B82F6]">
-                  {selectedUser.name.split(' ').map(n => n[0]).join('')}
+          {selectedUser ? (
+            <div className="bg-[#101B57] rounded-2xl border border-[#1E2A68] p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#3B82F6]/5 rounded-bl-full"></div>
+              
+              <div className="flex items-center justify-between gap-4 mb-8 border-b border-[#1E2A68] pb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-[#09133E] rounded-full flex items-center justify-center text-2xl font-bold text-[#FFFFFF] border-2 border-[#3B82F6]">
+                    {selectedUser.name ? selectedUser.name.split(' ').map(n => n[0]).join('') : ''}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#FFFFFF]">{selectedUser.name}</h2>
+                    <p className="text-[#3B82F6] font-medium mb-4">Report ID: {selectedUser.reportId}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[#94A3B8] text-sm mb-1">Credit Score</p>
+                  <p className={`text-3xl font-bold ${selectedUser.score === 'N/A' ? 'text-[#94A3B8]' : 'text-[#10B981]'}`}>{selectedUser.score}</p>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-[#FFFFFF] mb-4 flex items-center gap-2">
+                <Activity size={20} className="text-[#3B82F6]" />
+                Score History Timeline
+              </h3>
+              
+              <div className="relative pl-6 border-l-2 border-[#1E2A68] space-y-6 mb-8">
+                {selectedUser.history?.map((item, index) => (
+                  <div key={index} className="relative">
+                    <div className={`absolute -left-[31px] top-1 w-4 h-4 ${item.color} rounded-full border-4 border-[#101B57]`}></div>
+                    <p className="text-sm text-[#94A3B8] mb-1">{item.date}</p>
+                    <p className="font-bold text-[#FFFFFF]">{item.title}</p>
+                    <p className="text-xs text-[#94A3B8]">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="text-lg font-bold text-[#FFFFFF] mb-4 flex items-center gap-2">
+                <FileText size={20} className="text-[#3B82F6]" />
+                Financial Summary
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#09133E] rounded-xl p-4 border border-[#1E2A68]">
+                <div>
+                  <p className="text-xs text-[#94A3B8] mb-1">Total Assets</p>
+                  <p className="font-bold text-[#FFFFFF]">{selectedUser.financials?.totalAssets}</p>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-[#FFFFFF]">{selectedUser.name}</h2>
-                  <p className="text-[#3B82F6] font-medium mb-4">Report ID: {selectedUser.reportId}</p>
+                  <p className="text-xs text-[#94A3B8] mb-1">Total Debt</p>
+                  <p className="font-bold text-[#FFFFFF]">{selectedUser.financials?.totalDebt}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#94A3B8] mb-1">Monthly Income</p>
+                  <p className="font-bold text-[#FFFFFF]">{selectedUser.financials?.monthlyIncome}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#94A3B8] mb-1">Debt/Income</p>
+                  <p className={`font-bold ${parseInt(selectedUser.financials?.dti || '0') > 40 ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
+                    {selectedUser.financials?.dti}
+                  </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-[#94A3B8] text-sm mb-1">Credit Score</p>
-                <p className={`text-3xl font-bold ${selectedUser.score === 'N/A' ? 'text-[#94A3B8]' : 'text-[#10B981]'}`}>{selectedUser.score}</p>
-              </div>
             </div>
-
-            <h3 className="text-lg font-bold text-[#FFFFFF] mb-4 flex items-center gap-2">
-              <Activity size={20} className="text-[#3B82F6]" />
-              Score History Timeline
-            </h3>
-            
-            <div className="relative pl-6 border-l-2 border-[#1E2A68] space-y-6 mb-8">
-              {selectedUser.history.map((item, index) => (
-                <div key={index} className="relative">
-                  <div className={`absolute -left-[31px] top-1 w-4 h-4 ${item.color} rounded-full border-4 border-[#101B57]`}></div>
-                  <p className="text-sm text-[#94A3B8] mb-1">{item.date}</p>
-                  <p className="font-bold text-[#FFFFFF]">{item.title}</p>
-                  <p className="text-xs text-[#94A3B8]">{item.desc}</p>
-                </div>
-              ))}
+          ) : (
+            <div className="bg-[#101B57] rounded-2xl border border-[#1E2A68] p-8 text-center text-[#94A3B8]">
+              Loading report data...
             </div>
-
-            <h3 className="text-lg font-bold text-[#FFFFFF] mb-4 flex items-center gap-2">
-              <FileText size={20} className="text-[#3B82F6]" />
-              Financial Summary
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#09133E] rounded-xl p-4 border border-[#1E2A68]">
-              <div>
-                <p className="text-xs text-[#94A3B8] mb-1">Total Assets</p>
-                <p className="font-bold text-[#FFFFFF]">{selectedUser.financials?.totalAssets}</p>
-              </div>
-              <div>
-                <p className="text-xs text-[#94A3B8] mb-1">Total Debt</p>
-                <p className="font-bold text-[#FFFFFF]">{selectedUser.financials?.totalDebt}</p>
-              </div>
-              <div>
-                <p className="text-xs text-[#94A3B8] mb-1">Monthly Income</p>
-                <p className="font-bold text-[#FFFFFF]">{selectedUser.financials?.monthlyIncome}</p>
-              </div>
-              <div>
-                <p className="text-xs text-[#94A3B8] mb-1">Debt/Income</p>
-                <p className={`font-bold ${parseInt(selectedUser.financials?.dti) > 40 ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
-                  {selectedUser.financials?.dti}
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Sidebar Info */}
         <div className="space-y-6">
-          <div className="bg-[#101B57] rounded-2xl border border-[#1E2A68] p-6">
-            <h3 className="text-lg font-bold text-[#FFFFFF] mb-6 flex items-center gap-2">
-              <CreditCard size={20} className="text-[#3B82F6]" />
-              Credit Utilization
-            </h3>
-            
-            <div className="flex items-center justify-center mb-6">
-              <div className="relative w-32 h-32 flex items-center justify-center rounded-full">
-                <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 128 128">
-                  <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-[#1E2A68]"/>
-                  <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="351.85" strokeDashoffset={selectedUser.financials?.utilizationOffset || 246.3} className={`${parseInt(selectedUser.financials?.utilization) > 50 ? 'text-[#EF4444]' : 'text-[#10B981]'}`}/>
-                </svg>
-                <div className="text-center z-10">
-                  <span className="block text-2xl font-bold text-[#FFFFFF]">{selectedUser.financials?.utilization}</span>
-                  <span className="text-xs text-[#94A3B8]">Utilized</span>
+          {selectedUser && (
+            <div className="bg-[#101B57] rounded-2xl border border-[#1E2A68] p-6">
+              <h3 className="text-lg font-bold text-[#FFFFFF] mb-6 flex items-center gap-2">
+                <CreditCard size={20} className="text-[#3B82F6]" />
+                Credit Utilization
+              </h3>
+              
+              <div className="flex items-center justify-center mb-6">
+                <div className="relative w-32 h-32 flex items-center justify-center rounded-full">
+                  <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 128 128">
+                    <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-[#1E2A68]"/>
+                    <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="351.85" strokeDashoffset={selectedUser.financials?.utilizationOffset || 246.3} className={`${parseInt(selectedUser.financials?.utilization || '0') > 50 ? 'text-[#EF4444]' : 'text-[#10B981]'}`}/>
+                  </svg>
+                  <div className="text-center z-10">
+                    <span className="block text-2xl font-bold text-[#FFFFFF]">{selectedUser.financials?.utilization}</span>
+                    <span className="text-xs text-[#94A3B8]">Utilized</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-[#94A3B8]">Total Credit Limit</span>
+                  <span className="font-bold text-[#FFFFFF]">{selectedUser.financials?.totalCreditLimit}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-t border-[#1E2A68] pt-4">
+                  <span className="text-[#94A3B8]">Total Balance</span>
+                  <span className="font-bold text-[#FFFFFF]">{selectedUser.financials?.totalBalance}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-t border-[#1E2A68] pt-4">
+                  <span className="text-[#94A3B8]">Available Credit</span>
+                  <span className="font-bold text-[#10B981]">{selectedUser.financials?.availableCredit}</span>
                 </div>
               </div>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-[#94A3B8]">Total Credit Limit</span>
-                <span className="font-bold text-[#FFFFFF]">{selectedUser.financials?.totalCreditLimit}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm border-t border-[#1E2A68] pt-4">
-                <span className="text-[#94A3B8]">Total Balance</span>
-                <span className="font-bold text-[#FFFFFF]">{selectedUser.financials?.totalBalance}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm border-t border-[#1E2A68] pt-4">
-                <span className="text-[#94A3B8]">Available Credit</span>
-                <span className="font-bold text-[#10B981]">{selectedUser.financials?.availableCredit}</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </AdminLayout>

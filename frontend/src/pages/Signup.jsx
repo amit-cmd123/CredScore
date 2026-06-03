@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, Sun, Moon } from 'lucide-react';
+import ParticleNetwork from '../components/ParticleNetwork';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -15,7 +16,27 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [adminKey, setAdminKey] = useState('');
 
-  const handleSignup = (e) => {
+  // Get initial theme from localStorage or default to dark
+  const [theme, setTheme] = useState(localStorage.getItem('credscore_theme') || 'dark');
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  useEffect(() => {
+    // Ensure the document has the correct theme class on load
+    if (theme === 'system') {
+      const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.className = systemDark ? 'dark-theme' : 'light-theme';
+    } else {
+      document.documentElement.className = theme + '-theme';
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('credscore_theme', newTheme);
+  };
+
+  const handleSignup = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
@@ -26,21 +47,7 @@ const Signup = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      // Get existing users or initialize empty array
-      const existingUsers = JSON.parse(localStorage.getItem('credscore_users')) || [];
-      
-      // Check if email already exists
-      const userExists = existingUsers.some(u => u.email === formData.email);
-      
-      if (userExists) {
-        setIsLoading(false);
-        setError('An account with this email already exists.');
-        return;
-      }
-
-      // Add new user
+    try {
       const newUser = {
         id: `USR-9${Math.floor(100 + Math.random() * 900)}`,
         name: formData.name,
@@ -54,17 +61,28 @@ const Signup = () => {
         employer: 'Self-Employed',
         activeLoans: 0
       };
+
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      });
       
-      existingUsers.push(newUser);
-      localStorage.setItem('credscore_users', JSON.stringify(existingUsers));
+      const data = await res.json();
       
+      if (!res.ok) {
+        setIsLoading(false);
+        setError(data.error || 'Registration failed.');
+        return;
+      }
+
       // Also save current logged in user session
       localStorage.setItem('credscore_current_user', JSON.stringify({ email: newUser.email, role: newUser.role, name: newUser.name, id: newUser.id }));
 
       // Add notifications
       import('../utils/dataStore').then(m => {
-        m.addNotification(newUser.role, newUser.id, 'Welcome to CredScore!', `Your account has been created successfully.`, 'success');
-        m.addNotification('Admin', 'ALL', 'New User Registered', `${newUser.name} just registered as a ${newUser.role}.`, 'info');
+        m.createNotification(newUser.role, newUser.id, 'Welcome to CredScore!', `Your account has been created successfully.`, 'success');
+        m.createNotification('Admin', 'ALL', 'New User Registered', `${newUser.name} just registered as a ${newUser.role}.`, 'info');
       });
 
       setIsLoading(false);
@@ -74,21 +92,35 @@ const Signup = () => {
       } else {
         navigate('/user-dashboard');
       }
-    }, 1000);
+    } catch (err) {
+      setIsLoading(false);
+      setError('Failed to connect to the server. Is the backend running?');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#050B2D] flex items-center justify-center p-4 lg:p-8 font-sans text-[#FFFFFF] relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 lg:p-8 font-sans relative overflow-hidden bg-[#050B2D] text-[#FFFFFF]">
       
+      {/* Dark Mode Toggle */}
+      <button 
+        onClick={toggleTheme}
+        className="fixed top-6 right-6 z-[100] p-3 rounded-full backdrop-blur-md transition-all duration-300 border shadow-xl bg-[#101B57]/90 border-[#1E2A68] text-[#3B82F6] hover:bg-[#1E2A68] hover:scale-110"
+        title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+      >
+        {isDark ? <Sun size={24} /> : <Moon size={24} />}
+      </button>
+
       {/* Enhanced Textured Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1E2A68_1px,transparent_1px),linear-gradient(to_bottom,#1E2A68_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_70%,transparent_100%)] opacity-20"></div>
+        <div className="absolute inset-0 bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_70%,transparent_100%)] opacity-20 bg-[linear-gradient(to_right,#1E2A68_1px,transparent_1px),linear-gradient(to_bottom,#1E2A68_1px,transparent_1px)]"></div>
         
         {/* Abstract Glowing Orbs */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-[#3B82F6]/20 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }}></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#bd34fe]/15 blur-[150px] animate-pulse" style={{ animationDuration: '10s' }}></div>
-        <div className="absolute top-[30%] left-[50%] w-[40vw] h-[40vw] rounded-full bg-[#10B981]/10 blur-[120px] animate-pulse" style={{ animationDuration: '12s' }}></div>
+        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[120px] animate-pulse bg-[#3B82F6]/20" style={{ animationDuration: '8s' }}></div>
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full blur-[150px] animate-pulse bg-[#bd34fe]/15" style={{ animationDuration: '10s' }}></div>
+        <div className="absolute top-[30%] left-[50%] w-[40vw] h-[40vw] rounded-full blur-[120px] animate-pulse bg-[#10B981]/10" style={{ animationDuration: '12s' }}></div>
+        
+        {/* Particle Network Effect */}
+        <ParticleNetwork isDarkMode={isDark} />
       </div>
 
       <div className="w-full max-w-[540px] relative z-10 animate-fade-in-up">
@@ -101,7 +133,7 @@ const Signup = () => {
           </div>
         </div>
 
-        <div className="bg-[#101B57]/80 backdrop-blur-xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-[#1E2A68]/50 p-10 relative overflow-hidden group">
+        <div className="bg-[#101B57]/80 backdrop-blur-xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-[#1E2A68]/50 p-10 relative overflow-hidden group transition-colors duration-500">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#3B82F6] to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
 
           <h2 className="text-3xl font-bold text-[#FFFFFF] mb-2 tracking-tight">Create an Account</h2>
@@ -136,18 +168,20 @@ const Signup = () => {
             {/* Email */}
             <div className="group/input">
               <label className="block text-sm font-semibold text-[#94A3B8] mb-2 group-focus-within/input:text-[#3B82F6] transition-colors">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-[#94A3B8] group-focus-within/input:text-[#3B82F6] transition-colors" />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-[#94A3B8] group-focus-within/input:text-[#3B82F6] transition-colors" />
+                  </div>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="block w-full pl-12 pr-4 py-3.5 bg-[#050B2D] border border-[#1E2A68] rounded-xl text-sm text-[#FFFFFF] focus:ring-2 focus:ring-[#3B82F6]/50 focus:border-[#3B82F6] outline-none transition-all placeholder:text-[#1E2A68] disabled:opacity-70 disabled:cursor-not-allowed"
+                    placeholder="jane.doe@example.com"
+                    required
+                  />
                 </div>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="block w-full pl-12 pr-4 py-3.5 bg-[#050B2D] border border-[#1E2A68] rounded-xl text-sm text-[#FFFFFF] focus:ring-2 focus:ring-[#3B82F6]/50 focus:border-[#3B82F6] outline-none transition-all placeholder:text-[#1E2A68]"
-                  placeholder="jane.doe@example.com"
-                  required
-                />
               </div>
             </div>
 
@@ -245,7 +279,7 @@ const Signup = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.3)] text-sm font-bold text-[#FFFFFF] bg-[#3B82F6] hover:bg-[#2563EB] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#101B57] focus:ring-[#3B82F6] transition-all disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-[0.98]"
+              className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.3)] text-sm font-bold text-[#FFFFFF] bg-[#3B82F6] hover:bg-[#2563EB] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#101B57] focus:ring-[#3B82F6] transition-all disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98]"
             >
               {isLoading ? (
                 <>

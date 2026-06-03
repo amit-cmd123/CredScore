@@ -2,18 +2,46 @@ import React, { useState, useEffect } from 'react';
 import UserLayout from '../components/UserLayout';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Activity, ShieldCheck, FileText, BellRing, ArrowUpRight } from 'lucide-react';
-import { getApplications, getNotifications, calculateUserCreditScore } from '../utils/dataStore';
+import { fetchApplications, fetchNotifications, fetchUserCreditScore } from '../utils/dataStore';
 import { useNavigate } from 'react-router-dom';
 
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   const currentUser = JSON.parse(localStorage.getItem('credscore_current_user') || '{}');
-  const apps = getApplications().filter(a => a.userId === currentUser.id);
-  const myNotifs = getNotifications().filter(n => n.targetUserId === currentUser.id || (n.targetUserId === 'ALL' && (n.targetRole === currentUser.role || n.targetRole === 'ALL')));
   
-  const currentScore = calculateUserCreditScore(currentUser.id);
+  const [apps, setApps] = useState([]);
+  const [myNotifs, setMyNotifs] = useState([]);
+  const [currentScore, setCurrentScore] = useState('Loading...');
+
+  useEffect(() => {
+    const loadData = async () => {
+      const fetchedApps = await fetchApplications(currentUser.id);
+      setApps(fetchedApps);
+      
+      const score = await fetchUserCreditScore(currentUser.id);
+      setCurrentScore(score);
+      
+      const notifs = await fetchNotifications(currentUser.role, currentUser.id);
+      setMyNotifs(notifs);
+    };
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, [currentUser.id, currentUser.role]);
+
   const pendingApps = apps.filter(a => a.status === 'Pending' || a.status === 'Under Review').length;
+
+  const getRatingInfo = (score) => {
+    if (score === 'N/A') return { category: 'Not Established', color: 'text-[#94A3B8]' };
+    const s = parseInt(score);
+    if (s >= 750) return { category: 'Excellent', color: 'text-[#10B981]' };
+    if (s >= 700) return { category: 'Good', color: 'text-[#3B82F6]' };
+    if (s >= 650) return { category: 'Fair', color: 'text-[#FACC15]' };
+    return { category: 'Poor', color: 'text-[#EF4444]' };
+  };
+
+  const ratingInfo = getRatingInfo(currentScore);
 
   const getDynamicScoreData = (score) => {
     if (score === 'N/A') return [];
@@ -52,7 +80,7 @@ const UserDashboard = () => {
               <p className="text-sm font-medium text-[#10B981] mb-1 flex items-center"><ArrowUpRight size={16} /> +15 pts</p>
             )}
           </div>
-          <p className="text-sm text-[#94A3B8] mt-2">Rating: <span className={currentScore !== 'N/A' ? "text-[#10B981] font-bold" : "text-[#94A3B8] font-bold"}>{currentScore !== 'N/A' ? 'Excellent' : 'Not Established'}</span></p>
+          <p className="text-sm text-[#94A3B8] mt-2">Rating: <span className={`font-bold ${ratingInfo.color}`}>{ratingInfo.category}</span></p>
           <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-[#3B82F6]/5 rounded-full blur-2xl group-hover:bg-[#3B82F6]/10 transition-colors"></div>
         </div>
 

@@ -1,10 +1,20 @@
 import React, { useMemo } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { AlertTriangle, TrendingUp, TrendingDown, Minus, ShieldCheck, AlertCircle } from 'lucide-react';
-import { getApplications } from '../utils/dataStore';
+import { fetchApplications } from '../utils/dataStore';
 
 const AdminRisk = () => {
-  const apps = getApplications() || [];
+  const [apps, setApps] = React.useState([]);
+
+  React.useEffect(() => {
+    const loadApps = async () => {
+      const fetchedApps = await fetchApplications();
+      setApps(fetchedApps);
+    };
+    loadApps();
+    const interval = setInterval(loadApps, 5000);
+    return () => clearInterval(interval);
+  }, []);
   
   const riskStats = useMemo(() => {
     if (apps.length === 0) return { low: 0, medium: 0, high: 0 };

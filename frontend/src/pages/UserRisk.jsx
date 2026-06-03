@@ -1,17 +1,27 @@
 import React from 'react';
 import UserLayout from '../components/UserLayout';
-import { getApplications, calculateUserCreditScore } from '../utils/dataStore';
+import { fetchApplications, fetchUserCreditScore } from '../utils/dataStore';
 import { ShieldAlert, ShieldCheck, Shield, AlertTriangle, Info } from 'lucide-react';
 
 const UserRisk = () => {
   const currentUser = JSON.parse(localStorage.getItem('credscore_current_user') || '{}');
-  const apps = getApplications().filter(a => a.userId === currentUser.id);
-  const currentScore = calculateUserCreditScore(currentUser.id);
+  const [apps, setApps] = React.useState([]);
+  const [currentScore, setCurrentScore] = React.useState('Loading...');
 
+  React.useEffect(() => {
+    const loadData = async () => {
+      const fetchedApps = await fetchApplications(currentUser.id);
+      setApps(fetchedApps);
+      
+      const score = await fetchUserCreditScore(currentUser.id);
+      setCurrentScore(score);
+    };
+    loadData();
+  }, [currentUser.id]);
   let currentRisk = 'Medium';
   if (currentScore === 'N/A') currentRisk = 'N/A';
-  else if (currentScore >= 720) currentRisk = 'Low';
-  else if (currentScore >= 620) currentRisk = 'Medium';
+  else if (currentScore >= 750) currentRisk = 'Low';
+  else if (currentScore >= 650) currentRisk = 'Medium';
   else currentRisk = 'High';
 
   let config = { icon: null, color: '', bg: '', border: '', text: '', description: '' };
@@ -79,12 +89,12 @@ const UserRisk = () => {
             ) : (
               <ul className="space-y-4">
                 <li className="flex gap-4 p-4 bg-[#050B2D] rounded-xl border border-[#1E2A68]">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 ${currentScore >= 620 ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#EF4444]/20 text-[#EF4444]'}`}>
-                    {currentScore >= 620 ? '+' : '-'}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0 ${currentScore >= 650 ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#EF4444]/20 text-[#EF4444]'}`}>
+                    {currentScore >= 650 ? '+' : '-'}
                   </div>
                   <div>
-                    <p className="font-bold text-[#FFFFFF] mb-1">{currentScore >= 620 ? 'Consistent Income' : 'Debt-to-Income Concerns'}</p>
-                    <p className="text-sm text-[#94A3B8]">{currentScore >= 620 ? 'Your stated monthly income exceeds the minimum threshold for your requested debt burden.' : 'Your requested loan amounts are highly elevated compared to your stated income.'}</p>
+                    <p className="font-bold text-[#FFFFFF] mb-1">{currentScore >= 650 ? 'Consistent Income' : 'Debt-to-Income Concerns'}</p>
+                    <p className="text-sm text-[#94A3B8]">{currentScore >= 650 ? 'Your stated monthly income exceeds the minimum threshold for your requested debt burden.' : 'Your requested loan amounts are highly elevated compared to your stated income.'}</p>
                   </div>
                 </li>
                 <li className="flex gap-4 p-4 bg-[#050B2D] rounded-xl border border-[#1E2A68]">

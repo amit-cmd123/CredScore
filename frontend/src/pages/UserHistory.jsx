@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import UserLayout from '../components/UserLayout';
-import { getApplications } from '../utils/dataStore';
+import { fetchApplications } from '../utils/dataStore';
 import { Search, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,7 +8,17 @@ const UserHistory = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const currentUser = JSON.parse(localStorage.getItem('credscore_current_user') || '{}');
-  const userApps = getApplications().filter(a => a.userId === currentUser.id);
+  const [userApps, setUserApps] = React.useState([]);
+
+  React.useEffect(() => {
+    const loadApps = async () => {
+      const apps = await fetchApplications(currentUser.id);
+      setUserApps(apps);
+    };
+    loadApps();
+    const interval = setInterval(loadApps, 5000);
+    return () => clearInterval(interval);
+  }, [currentUser.id]);
 
   const filteredApps = userApps.filter(app => 
     app.id.toLowerCase().includes(searchQuery.toLowerCase()) || 

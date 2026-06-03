@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { FileSearch, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { getApplications, getRecentApplications, getUsers } from '../utils/dataStore';
+import { fetchApplications, fetchUsers } from '../utils/dataStore';
 
 const data = [
   { name: 'Jan', value: 120 },
@@ -16,14 +16,29 @@ const data = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const apps = getApplications() || [];
-  
+  const [apps, setApps] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const fetchedApps = await fetchApplications();
+      setApps(fetchedApps);
+      
+      const res = await fetch('http://localhost:5000/api/users');
+      if (res.ok) {
+        setAllUsers(await res.json());
+      }
+    };
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const totalApps = apps.length;
   const approvedApps = apps.filter(a => a.status === 'Approved').length;
   const rejectedApps = apps.filter(a => a.status === 'Rejected').length;
   const pendingApps = apps.filter(a => a.status === 'Pending' || a.status === 'Under Review').length;
   
-  const allUsers = getUsers() || [];
   const applicants = allUsers.filter(u => u.role === 'User');
 
   const riskData = [
@@ -33,7 +48,7 @@ const AdminDashboard = () => {
   ];
 
   const [showNewAppModal, setShowNewAppModal] = useState(false);
-  const recentActivity = getRecentApplications(5).map(app => ({
+  const recentActivity = apps.slice(0, 5).map(app => ({
     ...app,
     action: app.status === 'Pending' || app.status === 'Under Review' ? 'Review Required' : `${app.status} Loan`,
     time: app.date
